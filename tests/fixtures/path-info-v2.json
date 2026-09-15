@@ -1,0 +1,88 @@
+{
+  "info": {
+    "7nbi22pcc92y2fqbkyp7h3srvvklmckb-glibc-2.40-224": {
+      "ca": null,
+      "deriver": "fynmmhgd2qyxbxxs0cii34zj37mv3xcm-glibc-2.40-224.drv",
+      "narHash": "sha256-T8e9Q14s/JwE3mh1zVEFqd2+qDHpHvENTUyJ+xCHJhg=",
+      "narSize": 30180096,
+      "references": [
+        "7nbi22pcc92y2fqbkyp7h3srvvklmckb-glibc-2.40-224",
+        "fv5lgysa3hmf3l3dkkpwvndcg6xwhy8m-xgcc-14.3.0-libgcc",
+        "qywg7bxskvihq62ms2g51fkzkrdnyfkh-libidn2-2.3.8"
+      ],
+      "registrationTime": 1780539979,
+      "signatures": [
+        "cache.nixos.org-1:6QBqkWhKqoA/huEVTZDXdBwzS3YO9ILYEw7KEgDgOF72rhhC6njwGPx0AdE4nYdY6F+7Sm+Eqjh+QS8oErbVDA=="
+      ],
+      "storeDir": "/nix/store",
+      "ultimate": false,
+      "version": 2
+    },
+    "ffyzkisqs4vc4mg28bwwlyqjf8i9ph6b-ncurses-6.5": {
+      "ca": null,
+      "deriver": "x2rhvljsyhk653af0rsxfag78p4zvn0a-ncurses-6.5.drv",
+      "narHash": "sha256-yqIK+d4LIlbM7fFwN4AONlQqEMePLzxYHaIfTaKUJAc=",
+      "narSize": 3799856,
+      "references": [
+        "7nbi22pcc92y2fqbkyp7h3srvvklmckb-glibc-2.40-224",
+        "ffyzkisqs4vc4mg28bwwlyqjf8i9ph6b-ncurses-6.5"
+      ],
+      "registrationTime": 1780539979,
+      "signatures": [
+        "cache.nixos.org-1:tNA60zDO/bd7dLwdakC3xRhaimejb6IFP5MoqhFAIwNQ9cxxDQE6h3fwWmWej7UqgrrYg4UN+7OLtr+Lf6U7CQ=="
+      ],
+      "storeDir": "/nix/store",
+      "ultimate": false,
+      "version": 2
+    },
+    "fv5lgysa3hmf3l3dkkpwvndcg6xwhy8m-xgcc-14.3.0-libgcc": {
+      "ca": null,
+      "deriver": "k3yfb24asq152abydbqg56mdzq9q4bqy-xgcc-14.3.0.drv",
+      "narHash": "sha256-GLpG+H+2R89CF2xnG265h0plYt7Z6MQZBp2BkFaug+Y=",
+      "narSize": 201848,
+      "references": [],
+      "registrationTime": 1780539978,
+      "signatures": [
+        "cache.nixos.org-1:IUY5CTit2RZyQQhUfkWO1NRAZVLl1LSKPW5EQx3DDdMxi6lmMftHsvUMAbTGHgfpdkdnETwtk+xA/XklGG3XCg=="
+      ],
+      "storeDir": "/nix/store",
+      "ultimate": false,
+      "version": 2
+    },
+    "hjwppd89fk8781xl4r35xqlddwqi5f66-libunistring-1.4.1": {
+      "ca": null,
+      "deriver": "j800s5phgfn9jg7iyiys89qjcr5hxriz-libunistring-1.4.1.drv",
+      "narHash": "sha256-PL+0IyELi/H/u/lzg/sCNfTOFQnNmlcrn0nCfJAVvMc=",
+      "narSize": 2078896,
+      "references": [
+        "hjwppd89fk8781xl4r35xqlddwqi5f66-libunistring-1.4.1"
+      ],
+      "registrationTime": 1780539978,
+      "signatures": [
+        "cache.nixos.org-1:dmBsnmGMeb922hWs7nYTLxovsLm3zWMRMUW8ig6W5dvCtw4PVToz+LORHtlvm3LrmQvcFynFB3smWAQ2URHDAw=="
+      ],
+      "storeDir": "/nix/store",
+      "ultimate": false,
+      "version": 2
+    },
+    "qywg7bxskvihq62ms2g51fkzkrdnyfkh-libidn2-2.3.8": {
+      "ca": null,
+      "deriver": "a64c09hgbhz1k3knddjgc43z6hpb0gsx-libidn2-2.3.8.drv",
+      "narHash": "sha256-a3XlFmtLPq5nm04qVSCqhtYU/t41EgzYnVAiXu+xzTg=",
+      "narSize": 368208,
+      "references": [
+        "hjwppd89fk8781xl4r35xqlddwqi5f66-libunistring-1.4.1",
+        "qywg7bxskvihq62ms2g51fkzkrdnyfkh-libidn2-2.3.8"
+      ],
+      "registrationTime": 1780539978,
+      "signatures": [
+        "cache.nixos.org-1:Q1fFw+yFW9MWn39TJ/0CDGH5hRlbG+hmjNegqYwueSnlkcWpkK2R+hLxIfQ6YOoperX/i0YBvmkONwM0r1ZkDA=="
+      ],
+      "storeDir": "/nix/store",
+      "ultimate": false,
+      "version": 2
+    }
+  },
+  "storeDir": "/nix/store",
+  "version": 2
+}
