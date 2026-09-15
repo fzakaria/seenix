@@ -24,12 +24,10 @@ export class TileManager {
     this.renderer = renderer;
     this.worker = worker;
     this.onChange = onChange;
-    this.onTop = null;
     this.cache = new Map();
     this.inFlight = new Map();
     this.wanted = [];
     this.cpu = new Map();
-    this.topIds = null;
     this.generation = -1;
     this.order = TILE_SIZE;
     this.total = 0;
@@ -50,7 +48,6 @@ export class TileManager {
     this.inFlight.clear();
     this.cpu.clear();
     this.wanted = [];
-    this.topIds = null;
     this.generation = generation;
     this.order = order;
     this.total = total;
@@ -125,6 +122,17 @@ export class TileManager {
     this.pump();
     this.evict();
     return items;
+  }
+
+  // The coarsest tile, which covers the whole world, as a draw item placed
+  // at `rect`, or null until it has been built. The minimap is this item.
+  topItem(rect) {
+    const entry = this.cache.get(tileKey(maxLod(this.order), 0, 0));
+    if (entry === undefined) {
+      return null;
+    }
+    entry.lastUsed = this.frameNo;
+    return this.item(entry, rect, FULL_UV);
   }
 
   item(entry, rect, uv) {
@@ -202,10 +210,6 @@ export class TileManager {
       while (this.cpu.size > CPU_TILE_CACHE) {
         this.cpu.delete(this.cpu.keys().next().value);
       }
-    }
-    if (message.k === maxLod(this.order)) {
-      this.topIds = message.ids;
-      this.onTop?.(message.ids);
     }
     this.onChange();
   }

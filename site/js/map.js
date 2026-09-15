@@ -4,9 +4,8 @@
 // coordinates through its callbacks.
 
 import { Camera } from "./camera.js";
-import { TILE_SIZE } from "./config.js";
 import { Renderer } from "./render.js";
-import { NO_PATH, PATH_TABLE_WIDTH } from "./tileformat.js";
+import { NO_PATH } from "./tileformat.js";
 import { TileManager } from "./tiles.js";
 import { maxLod } from "./tilemath.js";
 import { Mode } from "./url.js";
@@ -37,10 +36,6 @@ export class MapView {
     this.tiles = new TileManager(this.renderer, tileWorker, () =>
       this.requestFrame(),
     );
-    this.tiles.onTop = () => {
-      this.minimapDirty = true;
-      this.requestFrame();
-    };
 
     this.model = null;
     this.mode = Mode.BYTES;
@@ -52,10 +47,6 @@ export class MapView {
     this.pathTable = null;
     this.pathTableRows = 1;
     this.pathTableDirty = false;
-    this.minimapDirty = true;
-    this.minimapBase = document.createElement("canvas");
-    this.minimapBase.width = TILE_SIZE;
-    this.minimapBase.height = TILE_SIZE;
     this.pending = false;
     this.pointers = new Map();
     this.gesture = null;
@@ -84,7 +75,6 @@ export class MapView {
     if (before !== null && this.model !== null) {
       this.camera.clampCenter();
     }
-    this.minimapDirty = true;
     this.requestFrame();
   }
 
@@ -100,7 +90,6 @@ export class MapView {
     } else {
       this.camera.set(view.cx, view.cy, view.zoom);
     }
-    this.minimapDirty = true;
     this.requestFrame();
   }
 
@@ -108,7 +97,6 @@ export class MapView {
     this.pathTable = bytes;
     this.pathTableRows = rows;
     this.pathTableDirty = true;
-    this.minimapDirty = true;
     this.requestFrame();
   }
 
@@ -131,7 +119,6 @@ export class MapView {
 
   setBackground(rgb) {
     this.background = rgb;
-    this.minimapDirty = true;
     this.requestFrame();
   }
 
@@ -176,6 +163,14 @@ export class MapView {
 
     const flying = this.camera.step(now);
     const items = this.tiles.frame(this.camera);
+
+    // The minimap is the coarsest tile drawn again, by the same shader, into
+    // the corner of the canvas under the minimap element, so it shows the
+    // same mode, bytes, hatching and highlighting as the map.
+    const minimap = this.tiles.topItem(this.minimapRect());
+    if (minimap !== null) {
+      items.push(minimap);
+    }
     this.renderer.draw(items, this.uniforms());
     this.drawOverlay();
     this.drawMinimap();
@@ -262,44 +257,26 @@ export class MapView {
     }
   }
 
-  // The whole world at the coarsest LOD in package colours, with the
-  // viewport outlined.
+  // The minimap element's rectangle in the canvas's device pixels.
+  minimapRect() {
+    const canvas = this.el.canvas.getBoundingClientRect();
+    const minimap = this.el.minimap.getBoundingClientRect();
+    const dpr = this.camera.dpr;
+    return [
+      (minimap.left - canvas.left) * dpr,
+      (minimap.top - canvas.top) * dpr,
+      (minimap.right - canvas.left) * dpr,
+      (minimap.bottom - canvas.top) * dpr,
+    ];
+  }
+
+  // The viewport outlined on the minimap. What it outlines is drawn by the
+  // renderer underneath (frame()).
   drawMinimap() {
     const { minimap } = this.el;
     const ctx = minimap.getContext("2d");
-    const ids = this.tiles.topIds;
 
-    if (this.minimapDirty && ids !== null && this.pathTable !== null) {
-      const base = this.minimapBase.getContext("2d");
-      const image = base.createImageData(TILE_SIZE, TILE_SIZE);
-      const bg = this.background.map((c) => Math.round(c * 255));
-      for (let i = 0; i < TILE_SIZE * TILE_SIZE; i += 1) {
-        const id = ids[2 * i];
-        const out = image.data;
-        if (id === NO_PATH) {
-          out.set([bg[0], bg[1], bg[2], 255], 4 * i);
-          continue;
-        }
-        const at =
-          (id % PATH_TABLE_WIDTH) * 4 +
-          Math.floor(id / PATH_TABLE_WIDTH) * PATH_TABLE_WIDTH * 4;
-        out.set(
-          [
-            this.pathTable[at],
-            this.pathTable[at + 1],
-            this.pathTable[at + 2],
-            255,
-          ],
-          4 * i,
-        );
-      }
-      base.putImageData(image, 0, 0);
-      this.minimapDirty = false;
-    }
-
-    ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, minimap.width, minimap.height);
-    ctx.drawImage(this.minimapBase, 0, 0, minimap.width, minimap.height);
 
     const scale = minimap.width / this.camera.worldSize;
     const r = this.camera.viewRect();
