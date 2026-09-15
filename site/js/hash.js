@@ -1,0 +1,145 @@
+// The hashes a narinfo carries, and checking bytes against them.
+//
+// Only NarHash is checked, because only NarHash is signed.
+//
+// Which encoding a hash is written in is up to the cache: cache.nixos.org
+// writes nix's own base32, cachix writes hex, and nix will also print
+// base64. Nix tells them apart by length and so does this.
+
+// Nix's alphabet: base32 without e, o, t and u.
+const ALPHABET = "0123456789abcdfghijklmnpqrsvwxyz";
+const BITS_PER_DIGIT = 5;
+const BITS_PER_BYTE = 8;
+
+// nix's decoder, transliterated: digits are read from the end of the
+// string, and each contributes five bits at an offset that grows by
+// five, spilling into the next byte.
+export function decodeNixBase32(text, size) {
+  const bytes = new Uint8Array(size);
+  for (let n = 0; n < text.length; n += 1) {
+    const digit = ALPHABET.indexOf(text[text.length - 1 - n]);
+    if (digit === -1) {
+      throw new Error(`not a nix base32 hash: ${text}`);
+    }
+    const bit = n * BITS_PER_DIGIT;
+    const i = Math.floor(bit / BITS_PER_BYTE);
+    const j = bit % BITS_PER_BYTE;
+    bytes[i] |= digit << j;
+    const carry = digit >> (BITS_PER_BYTE - j);
+    if (i < size - 1) {
+      bytes[i + 1] |= carry;
+    } else if (carry !== 0) {
+      throw new Error(`nix base32 hash has stray bits: ${text}`);
+    }
+  }
+  return bytes;
+}
+
+const DIGEST_SIZES = { sha256: 32 };
+
+const HEX_DIGITS_PER_BYTE = 2;
+
+function decodeHex(text, size) {
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const digits = text.slice(
+      i * HEX_DIGITS_PER_BYTE,
+      (i + 1) * HEX_DIGITS_PER_BYTE,
+    );
+    const byte = Number.parseInt(digits, 16);
+    if (Number.isNaN(byte)) {
+      throw new Error(`not a hex hash: ${text}`);
+    }
+    bytes[i] = byte;
+  }
+  return bytes;
+}
+
+function decodeBase64(text, size) {
+  const binary = atob(text);
+  if (binary.length !== size) {
+    throw new Error(
+      `base64 hash is ${binary.length} bytes, not ${size}: ${text}`,
+    );
+  }
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+// How long a digest of `size` bytes is in each encoding a cache may
+// have written it in. Lengths do not collide for sha256 — 64, 52 and
+// 44 — so the length names the encoding, which is how nix reads them.
+function decodersFor(size) {
+  return [
+    [size * HEX_DIGITS_PER_BYTE, decodeHex],
+    [Math.ceil((size * BITS_PER_BYTE) / BITS_PER_DIGIT), decodeNixBase32],
+    [Math.ceil(size / 3) * 4, decodeBase64],
+  ];
+}
+
+// "sha256:<hex | nix base32 | base64>" -> { algorithm, bytes }.
+export function parseHash(field) {
+  const [algorithm, text] = field.split(":");
+  const size = DIGEST_SIZES[algorithm];
+  if (size === undefined || text === undefined) {
+    throw new Error(`unsupported hash: ${field}`);
+  }
+
+  const match = decodersFor(size).find(([length]) => length === text.length);
+  if (match === undefined) {
+    throw new Error(`hash is not a sha256 in any known encoding: ${field}`);
+  }
+  const [, decode] = match;
+  return { algorithm, bytes: decode(text, size) };
+}
+
+// Whether `bytes` hash to what the narinfo says. Null when this
+// browser cannot hash (no SubtleCrypto outside a secure context), which
+// is not the same claim as a mismatch.
+export async function verifyHash(bytes, field) {
+  if (globalThis.crypto?.subtle === undefined) {
+    return null;
+  }
+  const expected = parseHash(field);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return (
+    digest.length === expected.bytes.length &&
+    digest.every((byte, i) => byte === expected.bytes[i])
+  );
+}
+
+// nix's encoder, the inverse of decodeNixBase32: the string is written
+// most significant digit first, each digit five bits read from the byte
+// array starting at the end.
+export function encodeNixBase32(bytes) {
+  const length = Math.ceil((bytes.length * BITS_PER_BYTE) / BITS_PER_DIGIT);
+  let text = "";
+  for (let n = length - 1; n >= 0; n -= 1) {
+    const bit = n * BITS_PER_DIGIT;
+    const i = Math.floor(bit / BITS_PER_BYTE);
+    const j = bit % BITS_PER_BYTE;
+    const low = bytes[i] >> j;
+    const high = i + 1 < bytes.length ? bytes[i + 1] << (BITS_PER_BYTE - j) : 0;
+    text += ALPHABET[(low | high) & 0x1f];
+  }
+  return text;
+}
+
+// An SRI hash ("sha256-<base64>"), as nix path-info --json writes
+// narHash since Nix 2.19.
+const SRI_PATTERN = /^([a-z0-9]+)-([A-Za-z0-9+/=]+)$/;
+
+// Any hash nix has written for a NAR, as the "sha256:<nix base32>" a
+// narinfo carries. That is also the form a cache signs
+// (substituters.js), so a signature on an imported path can only be
+// checked once its hash is spelled this way.
+export function normalizeHash(field) {
+  const sri = SRI_PATTERN.exec(field);
+  const colon = sri === null ? field : `${sri[1]}:${sri[2]}`;
+  const { algorithm, bytes } = parseHash(colon);
+  return `${algorithm}:${encodeNixBase32(bytes)}`;
+}
+
+// Whether two digests are the same bytes.
+export function sameBytes(a, b) {
+  return a.length === b.length && a.every((byte, i) => byte === b[i]);
+}

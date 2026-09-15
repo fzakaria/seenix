@@ -8,10 +8,8 @@
 # The same wrapped files load in node, which is what lets the test suite
 # drive the real decoders.
 #
-# The pins for xzwasm, fzstd and crabz2 are trynix's (nix/vendor.nix
-# there), including the xzwasm patch. hash-wasm adds an incremental
-# sha256, so a NAR's hash is checked as it streams rather than after
-# holding the whole archive.
+# hash-wasm provides an incremental sha256, so a NAR's hash is checked as
+# it streams.
 { pkgs }:
 let
   npm =
@@ -47,9 +45,7 @@ pkgs.runCommand "seenix-js-vendor" { } ''
 
   # The readable build rather than the minified one, so the patch
   # applies: patches/xzwasm/ makes the decoder copy each chunk out of
-  # its own memory before handing it on. Streaming makes the bug the
-  # patch fixes more likely, since a consumer that is still hashing the
-  # previous chunk is exactly the one that reads overwritten bytes.
+  # its own memory before handing it on.
   tar -xzf ${xzwasm} -C unpack
   cp unpack/package/dist/package/xzwasm.js xzwasm.js
   chmod u+w xzwasm.js
