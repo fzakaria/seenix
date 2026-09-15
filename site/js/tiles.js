@@ -81,7 +81,9 @@ export class TileManager {
     }
     if (topEntry !== undefined && top - k <= MAX_FALLBACK_LEVELS) {
       topEntry.lastUsed = this.frameNo;
-      items.push(this.item(topEntry, this.deviceRect(camera, top, 0, 0), FULL_UV));
+      items.push(
+        this.item(topEntry, this.deviceRect(camera, top, 0, 0), FULL_UV),
+      );
     }
 
     for (const { tx, ty } of visibleTiles(camera.viewRect(), order, k)) {
@@ -104,7 +106,11 @@ export class TileManager {
       }
 
       // Fall back to the nearest coarser tile that is ready.
-      for (let levels = 1; levels <= MAX_FALLBACK_LEVELS && k + levels < top; levels += 1) {
+      for (
+        let levels = 1;
+        levels <= MAX_FALLBACK_LEVELS && k + levels < top;
+        levels += 1
+      ) {
         const a = ancestorOf(k, tx, ty, levels);
         const ancestor = this.cache.get(tileKey(a.k, a.tx, a.ty));
         if (ancestor === undefined) {
@@ -143,7 +149,12 @@ export class TileManager {
       if (this.inFlight.has(request.key)) {
         continue;
       }
-      const [start, end] = tileByteRange(this.order, request.k, request.tx, request.ty);
+      const [start, end] = tileByteRange(
+        this.order,
+        request.k,
+        request.tx,
+        request.ty,
+      );
       this.inFlight.set(request.key, { start, end, stale: false });
       this.worker.postMessage({
         type: "build",
@@ -167,7 +178,12 @@ export class TileManager {
     if (old !== undefined) {
       this.renderer.deleteTile(old.textures);
     }
-    const [start, end] = tileByteRange(this.order, message.k, message.tx, message.ty);
+    const [start, end] = tileByteRange(
+      this.order,
+      message.k,
+      message.tx,
+      message.ty,
+    );
     this.cache.set(message.key, {
       k: message.k,
       tx: message.tx,
@@ -201,7 +217,9 @@ export class TileManager {
     }
     const topKey = tileKey(maxLod(this.order), 0, 0);
     const victims = [...this.cache.entries()]
-      .filter(([key, entry]) => entry.lastUsed !== this.frameNo && key !== topKey)
+      .filter(
+        ([key, entry]) => entry.lastUsed !== this.frameNo && key !== topKey,
+      )
       .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
     for (const [key, entry] of victims) {
       if (this.cache.size <= GPU_TILE_CACHE) {

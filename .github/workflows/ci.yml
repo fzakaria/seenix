@@ -28,9 +28,23 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: seenix
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # A pull request from a fork has no token; read from the cache
+          # and skip pushing rather than failing the job.
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
 
       - name: Formatting
         run: nix fmt -- --ci
 
       - name: Tests
         run: nix flake check -L
+
+      # The landing page links this closure from seenix.cachix.org, and
+      # cachix-action pushes what the job built.
+      - name: Example closure
+        run: nix build .#example -L

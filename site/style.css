@@ -249,6 +249,48 @@ button.armed {
 #search-results li:hover {
   background: var(--code-bg);
 }
+/* The active mode's key: a subdued dot per colour and what it means. */
+#mode-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  font-size: 13px;
+}
+#mode-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+#mode-legend i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  opacity: 0.85;
+}
+#mode-legend i.hatch {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--muted) 0 2px,
+    transparent 2px 5px
+  );
+}
+#search-results .heading {
+  padding: 0.3rem 0.6rem 0.1rem;
+  font:
+    11px system-ui,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: default;
+}
+#search-results .heading:hover {
+  background: none;
+}
 .toolbar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -291,6 +333,7 @@ button.armed {
   pointer-events: none;
 }
 #minimap {
+  cursor: grab;
   position: absolute;
   right: 0.6rem;
   bottom: 0.6rem;
@@ -298,8 +341,10 @@ button.armed {
   height: 8.5rem;
   border: 1px solid rgb(255 255 255 / 35%);
   border-radius: 4px;
-  cursor: pointer;
   touch-action: none;
+}
+#minimap:active {
+  cursor: grabbing;
 }
 #tooltip {
   position: absolute;
@@ -564,6 +609,48 @@ footer {
   }
   #modes button {
     flex: 1;
+  }
+  /* The active mode's key: a subdued dot per colour and what it means. */
+  #mode-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 13px;
+  }
+  #mode-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  #mode-legend i {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    opacity: 0.85;
+  }
+  #mode-legend i.hatch {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--muted) 0 2px,
+      transparent 2px 5px
+    );
+  }
+  #search-results .heading {
+    padding: 0.3rem 0.6rem 0.1rem;
+    font:
+      11px system-ui,
+      sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    cursor: default;
+  }
+  #search-results .heading:hover {
+    background: none;
   }
   .toolbar-actions {
     width: 100%;

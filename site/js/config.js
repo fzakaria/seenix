@@ -96,6 +96,16 @@ export const FEATURED = [
     label: "hello",
     path: "/nix/store/xl1h9i29pgq2q5cszjhm5wpfxfbbqwyi-hello-2.12.3",
   },
+  // nix/example.nix, pushed to seenix.cachix.org on 2026-09-15; its glibc
+  // and zlib come from cache.nixos.org.
+  {
+    label: "a program from two caches",
+    title:
+      "the root is in seenix.cachix.org, its dependencies in cache.nixos.org",
+    path: "/nix/store/ai6f2pk9awwdmr9k8ksfql68z4d01aap-seenix-example-1",
+    cache:
+      "https://seenix.cachix.org seenix.cachix.org-1:J3smIV60apuKqx9is7E+VWO1EQpLnaWVv4O37CxWkHY=",
+  },
   {
     label: "ripgrep",
     path: "/nix/store/hkclq7d0j10l7gk1v2hpif398dvnq6lz-ripgrep-15.2.0",

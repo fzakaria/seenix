@@ -44,7 +44,10 @@ test("a cycle: every member reaches every other and sums stay finite", () => {
   // 0 -> 1 -> 2 -> 1, 2 -> 3
   const references = [[1], [2], [1, 3], []];
   const sizes = [1, 10, 100, 1000];
-  assert.deepEqual([...closureSizes(references, sizes)], [1111, 1110, 1110, 1000]);
+  assert.deepEqual(
+    [...closureSizes(references, sizes)],
+    [1111, 1110, 1110, 1000],
+  );
   const { retained, idom } = retainedSizes(references, [0], sizes);
   assert.deepEqual([...idom], [VIRTUAL_ROOT, 0, 1, 2]);
   assert.deepEqual([...retained], [1111, 1110, 1100, 1000]);

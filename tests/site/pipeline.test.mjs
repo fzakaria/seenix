@@ -36,7 +36,9 @@ const NAR_SIZE = 904;
 const PIECE = 37;
 
 const fixture = async (name) =>
-  new Uint8Array(await readFile(new URL(`../fixtures/${name}`, import.meta.url)));
+  new Uint8Array(
+    await readFile(new URL(`../fixtures/${name}`, import.meta.url)),
+  );
 
 // A body that hands out the bytes a few at a time, the way a network
 // response does.
@@ -81,25 +83,35 @@ for (const [file, compression] of [
   ["sample.nar.zst", "zstd"],
   ["sample.nar.bz2", "bzip2"],
 ]) {
-  test(`${compression}: decodes, verifies and indexes in one pass`, { skip }, async () => {
-    const nar = await fixture("sample.nar");
-    const { result, joined } = await run(file, compression);
+  test(
+    `${compression}: decodes, verifies and indexes in one pass`,
+    { skip },
+    async () => {
+      const nar = await fixture("sample.nar");
+      const { result, joined } = await run(file, compression);
 
-    assert.deepEqual(joined, nar);
-    assert.equal(result.narBytes, NAR_SIZE);
-    assert.equal(result.index.entries.length, parseNar(nar).length);
-    assert.equal(result.summary.coarse.length, 4);
-    assert.ok(result.compressedBytes > 0);
-  });
+      assert.deepEqual(joined, nar);
+      assert.equal(result.narBytes, NAR_SIZE);
+      assert.equal(result.index.entries.length, parseNar(nar).length);
+      assert.equal(result.summary.coarse.length, 4);
+      assert.ok(result.compressedBytes > 0);
+    },
+  );
 }
 
 test("a NarHash that does not match fails by name", { skip }, async () => {
   const wrong = "sha256:1".padEnd(59, "0");
-  await assert.rejects(run("sample.nar.xz", "xz", { narHash: wrong }), /sha256 does not match/);
+  await assert.rejects(
+    run("sample.nar.xz", "xz", { narHash: wrong }),
+    /sha256 does not match/,
+  );
 });
 
 test("a NarSize that does not match fails by name", { skip }, async () => {
-  await assert.rejects(run("sample.nar.zst", "zstd", { narSize: 900 }), /narinfo says 900/);
+  await assert.rejects(
+    run("sample.nar.zst", "zstd", { narSize: 900 }),
+    /narinfo says 900/,
+  );
 });
 
 test("a truncated compressed stream fails", { skip }, async () => {
@@ -115,9 +127,13 @@ test("a truncated compressed stream fails", { skip }, async () => {
   );
 });
 
-test("an unknown compression is refused before any bytes are read", { skip }, async () => {
-  await assert.rejects(
-    run("sample.nar", "lz4"),
-    /unsupported NAR compression "lz4"/,
-  );
-});
+test(
+  "an unknown compression is refused before any bytes are read",
+  { skip },
+  async () => {
+    await assert.rejects(
+      run("sample.nar", "lz4"),
+      /unsupported NAR compression "lz4"/,
+    );
+  },
+);

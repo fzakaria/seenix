@@ -67,7 +67,8 @@ export async function closureFromJson(text, substituters, onProgress) {
     try {
       const info = await fetchNarinfo(record.digest, substituters);
       const agrees =
-        record.narHash === null || normalizeHash(info.narHash) === record.narHash;
+        record.narHash === null ||
+        normalizeHash(info.narHash) === record.narHash;
       if (agrees) {
         Object.assign(record, {
           narHash: record.narHash ?? info.narHash,

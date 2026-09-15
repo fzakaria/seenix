@@ -9,11 +9,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { parseNar } from "../../site/js/nar.js";
-import {
-  NarIndexer,
-  buildFileLookup,
-  fileAt,
-} from "../../site/js/narindex.js";
+import { NarIndexer, buildFileLookup, fileAt } from "../../site/js/narindex.js";
 
 const fixture = new URL("../fixtures/sample.nar", import.meta.url);
 

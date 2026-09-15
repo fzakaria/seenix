@@ -202,7 +202,9 @@ export class MapView {
     this.pending = false;
     const items = this.tiles.frame(this.camera);
     this.renderer.draw(items, this.uniforms());
-    return new Promise((resolve) => this.el.canvas.toBlob(resolve, "image/png"));
+    return new Promise((resolve) =>
+      this.el.canvas.toBlob(resolve, "image/png"),
+    );
   }
 
   // Hex digits over bytes at deep zoom, and the line from a hovered store
@@ -244,7 +246,9 @@ export class MapView {
     if (this.refLine !== null) {
       const [fx, fy] = camera.toDevice(...this.refLine.from);
       const [tx, ty] = camera.toDevice(...this.refLine.to);
-      const accent = getComputedStyle(this.el.shell).getPropertyValue("--accent").trim();
+      const accent = getComputedStyle(this.el.shell)
+        .getPropertyValue("--accent")
+        .trim();
       ctx.strokeStyle = accent || "#8fa3ff";
       ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = 2 * camera.dpr;
@@ -276,8 +280,18 @@ export class MapView {
           out.set([bg[0], bg[1], bg[2], 255], 4 * i);
           continue;
         }
-        const at = (id % PATH_TABLE_WIDTH) * 4 + Math.floor(id / PATH_TABLE_WIDTH) * PATH_TABLE_WIDTH * 4;
-        out.set([this.pathTable[at], this.pathTable[at + 1], this.pathTable[at + 2], 255], 4 * i);
+        const at =
+          (id % PATH_TABLE_WIDTH) * 4 +
+          Math.floor(id / PATH_TABLE_WIDTH) * PATH_TABLE_WIDTH * 4;
+        out.set(
+          [
+            this.pathTable[at],
+            this.pathTable[at + 1],
+            this.pathTable[at + 2],
+            255,
+          ],
+          4 * i,
+        );
       }
       base.putImageData(image, 0, 0);
       this.minimapDirty = false;
@@ -291,7 +305,12 @@ export class MapView {
     const r = this.camera.viewRect();
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = Math.max(1, this.camera.dpr);
-    ctx.strokeRect(r.x0 * scale, r.y0 * scale, (r.x1 - r.x0) * scale, (r.y1 - r.y0) * scale);
+    ctx.strokeRect(
+      r.x0 * scale,
+      r.y0 * scale,
+      (r.x1 - r.x0) * scale,
+      (r.y1 - r.y0) * scale,
+    );
   }
 
   local(event) {
@@ -312,7 +331,11 @@ export class MapView {
       const at = this.local(event);
       this.pointers.set(event.pointerId, at);
       if (this.pointers.size === 1) {
-        this.gesture = { start: at, moved: false, pointerType: event.pointerType };
+        this.gesture = {
+          start: at,
+          moved: false,
+          pointerType: event.pointerType,
+        };
       } else {
         this.gesture = { ...this.gesture, moved: true };
       }
@@ -336,11 +359,18 @@ export class MapView {
         const other = a === previous ? b : a;
         const before = Math.hypot(previous.x - other.x, previous.y - other.y);
         const after = Math.hypot(at.x - other.x, at.y - other.y);
-        const midBefore = { x: (previous.x + other.x) / 2, y: (previous.y + other.y) / 2 };
+        const midBefore = {
+          x: (previous.x + other.x) / 2,
+          y: (previous.y + other.y) / 2,
+        };
         const midAfter = { x: (at.x + other.x) / 2, y: (at.y + other.y) / 2 };
         this.pointers.set(event.pointerId, at);
         if (before > 0 && after > 0) {
-          this.camera.zoomAround(midBefore.x, midBefore.y, Math.log2(after / before));
+          this.camera.zoomAround(
+            midBefore.x,
+            midBefore.y,
+            Math.log2(after / before),
+          );
         }
         this.camera.panBy(midAfter.x - midBefore.x, midAfter.y - midBefore.y);
         this.requestFrame();
@@ -350,7 +380,10 @@ export class MapView {
       // One pointer: drag to pan once it has moved past the threshold.
       this.pointers.set(event.pointerId, at);
       const start = this.gesture?.start ?? at;
-      if (!this.gesture.moved && Math.hypot(at.x - start.x, at.y - start.y) < DRAG_THRESHOLD_PX) {
+      if (
+        !this.gesture.moved &&
+        Math.hypot(at.x - start.x, at.y - start.y) < DRAG_THRESHOLD_PX
+      ) {
         return;
       }
       this.gesture.moved = true;
@@ -368,7 +401,11 @@ export class MapView {
       const at = this.local(event);
       this.pointers.delete(event.pointerId);
       const gesture = this.gesture;
-      if (this.pointers.size > 0 || gesture === null || event.type === "pointercancel") {
+      if (
+        this.pointers.size > 0 ||
+        gesture === null ||
+        event.type === "pointercancel"
+      ) {
         return;
       }
       this.gesture = null;
@@ -404,7 +441,11 @@ export class MapView {
 
     canvas.addEventListener("dblclick", (event) => {
       const at = this.local(event);
-      this.camera.zoomAround(at.x, at.y, event.shiftKey ? -DOUBLE_CLICK_ZOOM : DOUBLE_CLICK_ZOOM);
+      this.camera.zoomAround(
+        at.x,
+        at.y,
+        event.shiftKey ? -DOUBLE_CLICK_ZOOM : DOUBLE_CLICK_ZOOM,
+      );
       this.requestFrame();
     });
 
@@ -419,26 +460,79 @@ export class MapView {
             : event.deltaMode === DOM_DELTA_PAGE
               ? WHEEL_PAGE_PX
               : 1;
-        this.camera.zoomAround(at.x, at.y, -event.deltaY * unit * WHEEL_ZOOM_PER_PIXEL);
+        this.camera.zoomAround(
+          at.x,
+          at.y,
+          -event.deltaY * unit * WHEEL_ZOOM_PER_PIXEL,
+        );
         this.requestFrame();
-        this.scheduleHover(this.point(at.x, at.y, event.pointerType ?? "mouse"));
+        this.scheduleHover(
+          this.point(at.x, at.y, event.pointerType ?? "mouse"),
+        );
       },
       { passive: false },
     );
 
     shell.addEventListener("keydown", (event) => this.key(event));
 
-    // The minimap recentres the view where it is pressed.
-    minimap.addEventListener("pointerdown", (event) => {
-      event.stopPropagation();
+    // The minimap moves the view. Pressing inside the viewport box grabs
+    // the box and drags it; pressing anywhere else centres the view there
+    // and keeps dragging from that point. Scrolling over it zooms.
+    let grab = null;
+    const worldAt = (event) => {
       const rect = minimap.getBoundingClientRect();
       const scale = this.camera.worldSize / rect.width;
-      this.flyTo(
+      return [
         (event.clientX - rect.left) * scale,
         (event.clientY - rect.top) * scale,
-        this.camera.zoom,
-      );
+      ];
+    };
+    minimap.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      try {
+        minimap.setPointerCapture(event.pointerId);
+      } catch {
+        // A synthetic pointer has nothing to capture; the drag still works
+        // while the pointer stays over the minimap.
+      }
+      const [wx, wy] = worldAt(event);
+      const view = this.camera.viewRect();
+      const inside =
+        wx >= view.x0 && wx <= view.x1 && wy >= view.y0 && wy <= view.y1;
+      grab = inside ? [this.camera.cx - wx, this.camera.cy - wy] : [0, 0];
+      this.camera.set(wx + grab[0], wy + grab[1], this.camera.zoom);
+      this.requestFrame();
     });
+    minimap.addEventListener("pointermove", (event) => {
+      if (grab === null) {
+        return;
+      }
+      const [wx, wy] = worldAt(event);
+      this.camera.set(wx + grab[0], wy + grab[1], this.camera.zoom);
+      this.requestFrame();
+    });
+    const releaseMinimap = () => {
+      grab = null;
+    };
+    minimap.addEventListener("pointerup", releaseMinimap);
+    minimap.addEventListener("pointercancel", releaseMinimap);
+    minimap.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const cssWidth = this.camera.width / this.camera.dpr;
+        const cssHeight = this.camera.height / this.camera.dpr;
+        this.camera.zoomAround(
+          cssWidth / 2,
+          cssHeight / 2,
+          -event.deltaY * WHEEL_ZOOM_PER_PIXEL,
+        );
+        this.requestFrame();
+      },
+      { passive: false },
+    );
   }
 
   key(event) {

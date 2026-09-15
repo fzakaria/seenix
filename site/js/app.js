@@ -38,8 +38,18 @@ import {
   parseSubstituters,
   verify,
 } from "./substituters.js";
-import { NO_PATH, PATH_TABLE_WIDTH, PathState, RawStore } from "./tileformat.js";
-import { lodFor, tileByteRange, tileWorldSize, visibleTiles } from "./tilemath.js";
+import {
+  NO_PATH,
+  PATH_TABLE_WIDTH,
+  PathState,
+  RawStore,
+} from "./tileformat.js";
+import {
+  lodFor,
+  tileByteRange,
+  tileWorldSize,
+  visibleTiles,
+} from "./tilemath.js";
 import { MODES, Mode, readUrl, writeUrl } from "./url.js";
 
 const $ = (id) => document.getElementById(id);
@@ -59,12 +69,18 @@ const SUPPORTED_COMPRESSION = new Set(["xz", "zstd", "bzip2", "none"]);
 
 const opfs = (await opfsDirs()) !== null;
 
-const tileWorker = new Worker(new URL("./workers/tile-worker.js", import.meta.url), {
-  type: "module",
-});
-const graphWorker = new Worker(new URL("./workers/graph-worker.js", import.meta.url), {
-  type: "module",
-});
+const tileWorker = new Worker(
+  new URL("./workers/tile-worker.js", import.meta.url),
+  {
+    type: "module",
+  },
+);
+const graphWorker = new Worker(
+  new URL("./workers/graph-worker.js", import.meta.url),
+  {
+    type: "module",
+  },
+);
 
 const state = {
   generation: 0,
@@ -142,7 +158,12 @@ async function copy(text) {
 let map = null;
 try {
   map = new MapView(
-    { shell: $("map-shell"), canvas: $("map"), overlay: $("overlay"), minimap: $("minimap") },
+    {
+      shell: $("map-shell"),
+      canvas: $("map"),
+      overlay: $("overlay"),
+      minimap: $("minimap"),
+    },
     tileWorker,
     {
       onHover,
@@ -160,14 +181,25 @@ try {
     },
   );
 } catch (err) {
-  $("empty").replaceChildren(el("p", {}, `The map needs WebGL2, which this browser did not provide: ${err.message}`));
+  $("empty").replaceChildren(
+    el(
+      "p",
+      {},
+      `The map needs WebGL2, which this browser did not provide: ${err.message}`,
+    ),
+  );
 }
 
 function applyTheme() {
-  const color = getComputedStyle(document.documentElement).getPropertyValue("--map-bg");
+  const color = getComputedStyle(document.documentElement).getPropertyValue(
+    "--map-bg",
+  );
   map?.setBackground(parseHexColor(color));
 }
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+matchMedia("(prefers-color-scheme: dark)").addEventListener(
+  "change",
+  applyTheme,
+);
 applyTheme();
 
 // ---------- the address bar ----------
@@ -194,20 +226,30 @@ function applyUrl(url) {
   state.mode = url.mode ?? DEFAULT_MODE;
   state.pendingSel = url.sel;
   state.pendingView = url.view;
-  $("caches-input").value = url.caches.map((c) => `${c.url} ${c.key}`).join("\n");
+  $("caches-input").value = url.caches
+    .map((c) => `${c.url} ${c.key}`)
+    .join("\n");
   $("store-path").value = url.paths.join(" ");
-  $("pkg-input").value = url.pkgs.map((p) => (p.version ? `${p.attr}@${p.version}` : p.attr)).join(" ");
+  $("pkg-input").value = url.pkgs
+    .map((p) => (p.version ? `${p.attr}@${p.version}` : p.attr))
+    .join(" ");
   $("json-url").value = url.json ?? "";
   renderModes();
   map?.setMode(state.mode);
 }
 
-function navigate(source, jsonText = null) {
+function navigate(source, jsonText = null, caches = state.caches) {
+  state.caches = caches;
+  $("caches-input").value = caches.map((c) => `${c.url} ${c.key}`).join("\n");
   state.source = source;
   state.jsonText = jsonText;
   state.pendingSel = null;
   state.pendingView = null;
-  history.pushState(null, "", writeUrl({ ...source, caches: state.caches, mode: urlState().mode }));
+  history.pushState(
+    null,
+    "",
+    writeUrl({ ...source, caches: state.caches, mode: urlState().mode }),
+  );
   load();
 }
 
@@ -221,7 +263,11 @@ addEventListener("popstate", () => {
 async function load() {
   const token = ++state.loadToken;
   const { paths, pkgs, json } = state.source;
-  const hasSource = paths.length > 0 || pkgs.length > 0 || json !== null || state.jsonText !== null;
+  const hasSource =
+    paths.length > 0 ||
+    pkgs.length > 0 ||
+    json !== null ||
+    state.jsonText !== null;
   $("empty").hidden = hasSource;
   if (!hasSource) {
     setStatus("");
@@ -235,17 +281,25 @@ async function load() {
       const text = state.jsonText ?? (await (await fetch(json)).text());
       result = await closureFromJson(text, substituters(), (done, total) => {
         if (token === state.loadToken) {
-          setStatus(`Looking up ${count(done)} of ${count(total)} paths in the caches…`);
+          setStatus(
+            `Looking up ${count(done)} of ${count(total)} paths in the caches…`,
+          );
         }
       });
     } else {
       setStatus("Resolving…");
-      const resolved = await Promise.all(pkgs.map((p) => resolvePackage(p.attr, p.version)));
-      result = await closureFromPaths([...paths, ...resolved], substituters(), (n) => {
-        if (token === state.loadToken) {
-          setStatus(`Walking the closure: ${count(n)} paths`);
-        }
-      });
+      const resolved = await Promise.all(
+        pkgs.map((p) => resolvePackage(p.attr, p.version)),
+      );
+      result = await closureFromPaths(
+        [...paths, ...resolved],
+        substituters(),
+        (n) => {
+          if (token === state.loadToken) {
+            setStatus(`Walking the closure: ${count(n)} paths`);
+          }
+        },
+      );
     }
     if (token !== state.loadToken) {
       return;
@@ -263,10 +317,14 @@ async function load() {
     const notes = [
       `${count(model.paths.length)} paths, ${humanBytes(model.total)}, laid out in ${elapsed} ms`,
       local > 0 ? `${count(local)} local-only` : null,
-      result.problems.length > 0 ? `${count(result.problems.length)} problems: ${result.problems[0]}` : null,
+      result.problems.length > 0
+        ? `${count(result.problems.length)} problems: ${result.problems[0]}`
+        : null,
       state.jsonText !== null ? "a dropped file is not part of the link" : null,
     ];
-    setStatus(notes.filter(Boolean).join(" · "), { error: result.problems.length > 0 });
+    setStatus(notes.filter(Boolean).join(" · "), {
+      error: result.problems.length > 0,
+    });
   } catch (err) {
     if (token === state.loadToken) {
       setStatus(err.message, { error: true });
@@ -306,7 +364,10 @@ function install(model) {
   state.tableRows = Math.max(1, Math.ceil(n / PATH_TABLE_WIDTH));
   state.pathTable = new Uint8Array(PATH_TABLE_WIDTH * state.tableRows * 4);
   for (const path of model.paths) {
-    state.pathTable.set([...packageColor(path.name, path.digest), state.bits[path.id]], path.id * 4);
+    state.pathTable.set(
+      [...packageColor(path.name, path.digest), state.bits[path.id]],
+      path.id * 4,
+    );
   }
 
   tileWorker.postMessage({
@@ -319,7 +380,10 @@ function install(model) {
   });
   fetcher.reset(model.paths.map((p) => [p.digest, p.id]));
 
-  const selected = state.pendingSel === null ? -1 : (model.byDigest.get(state.pendingSel) ?? -1);
+  const selected =
+    state.pendingSel === null
+      ? -1
+      : (model.byDigest.get(state.pendingSel) ?? -1);
   if (map !== null) {
     map.setModel(model, generation, state.pendingView ?? null);
     map.setPathTable(state.pathTable, state.tableRows);
@@ -379,7 +443,9 @@ async function verifyAll(generation) {
 async function restoreCached(generation) {
   const hashes = [...state.byHash.keys()];
   const [summaries, indexes, refs, raws] = await Promise.all(
-    [Store.SUMMARIES, Store.INDEXES, Store.REFS, Store.RAW].map((store) => getMany(store, hashes)),
+    [Store.SUMMARIES, Store.INDEXES, Store.REFS, Store.RAW].map((store) =>
+      getMany(store, hashes),
+    ),
   );
   if (generation !== state.generation) {
     return;
@@ -398,7 +464,10 @@ async function restoreCached(generation) {
       state.refs.set(
         hash,
         stored.hits
-          .map((hit) => ({ offset: hit.offset, target: state.model.byDigest.get(hit.digest) }))
+          .map((hit) => ({
+            offset: hit.offset,
+            target: state.model.byDigest.get(hit.digest),
+          }))
           .filter((hit) => hit.target !== undefined),
       );
     }
@@ -435,7 +504,12 @@ function applyCoarse(hash, records) {
   const ids = state.byHash.get(hash);
   state.coarse.set(hash, records);
   setBits(ids, PathState.SUMMARY, 0);
-  tileWorker.postMessage({ type: "coarse", generation: state.generation, ids, records });
+  tileWorker.postMessage({
+    type: "coarse",
+    generation: state.generation,
+    ids,
+    records,
+  });
 }
 
 function applyIndex(hash, index) {
@@ -443,8 +517,17 @@ function applyIndex(hash, index) {
   const lookup = buildFileLookup(index.entries);
   state.indexes.set(hash, index);
   state.lookups.set(hash, lookup);
-  const ends = Float64Array.from(lookup.ids, (i) => index.entries[i].contentOffset + index.entries[i].size);
-  tileWorker.postMessage({ type: "files", generation: state.generation, ids, starts: lookup.starts, ends });
+  const ends = Float64Array.from(
+    lookup.ids,
+    (i) => index.entries[i].contentOffset + index.entries[i].size,
+  );
+  tileWorker.postMessage({
+    type: "files",
+    generation: state.generation,
+    ids,
+    starts: lookup.starts,
+    ends,
+  });
 }
 
 // ---------- fetching ----------
@@ -477,8 +560,17 @@ function onFetchEvent(type, job, data) {
     finishFetch(job.narHash, ids, data);
   } else if (type === FetchEvent.EVICT) {
     setBits(ids, 0, PathState.RAW);
-    tileWorker.postMessage({ type: "raw", generation: state.generation, ids, available: false });
-    tileWorker.postMessage({ type: "forget", generation: state.generation, name: fileNameOf(job.narHash) });
+    tileWorker.postMessage({
+      type: "raw",
+      generation: state.generation,
+      ids,
+      available: false,
+    });
+    tileWorker.postMessage({
+      type: "forget",
+      generation: state.generation,
+      name: fileNameOf(job.narHash),
+    });
     removeNarFiles(job.narHash);
     remove(Store.RAW, job.narHash);
     invalidatePaths(ids);
@@ -495,12 +587,23 @@ function finishFetch(hash, ids, data) {
 
   if (data.rawStored === RawStore.MEMORY) {
     tileWorker.postMessage(
-      { type: "memory", generation: state.generation, name: fileNameOf(hash), raw: data.raw, fine: data.fine },
+      {
+        type: "memory",
+        generation: state.generation,
+        name: fileNameOf(hash),
+        raw: data.raw,
+        fine: data.fine,
+      },
       [data.raw.buffer, data.fine.buffer],
     );
   }
   if (data.rawStored !== null) {
-    tileWorker.postMessage({ type: "raw", generation: state.generation, ids, available: true });
+    tileWorker.postMessage({
+      type: "raw",
+      generation: state.generation,
+      ids,
+      available: true,
+    });
   }
   setBits(ids, data.rawStored !== null ? PathState.RAW : 0, PathState.LOADING);
   invalidatePaths(ids);
@@ -511,11 +614,17 @@ function finishFetch(hash, ids, data) {
   put(Store.SUMMARIES, hash, data.coarse);
   put(Store.INDEXES, hash, data.index);
   put(Store.REFS, hash, {
-    hits: data.refs.hits.map((hit) => ({ offset: hit.offset, digest: paths[hit.target].digest })),
+    hits: data.refs.hits.map((hit) => ({
+      offset: hit.offset,
+      digest: paths[hit.target].digest,
+    })),
     truncated: data.refs.truncated,
   });
   if (data.rawStored === RawStore.OPFS) {
-    put(Store.RAW, hash, { bytes: fetcher.stored.get(hash)?.bytes ?? 0, lastUsed: Date.now() });
+    put(Store.RAW, hash, {
+      bytes: fetcher.stored.get(hash)?.bytes ?? 0,
+      lastUsed: Date.now(),
+    });
   }
 }
 
@@ -603,7 +712,11 @@ function everythingPending() {
   const jobs = new Map();
   for (const path of state.model?.paths ?? []) {
     const bits = state.bits[path.id];
-    if (!fetchable(path) || bits & (PathState.RAW | PathState.LOADING) || jobs.has(path.narHash)) {
+    if (
+      !fetchable(path) ||
+      bits & (PathState.RAW | PathState.LOADING) ||
+      jobs.has(path.narHash)
+    ) {
       continue;
     }
     jobs.set(path.narHash, jobFor(path, path.fileSize || path.narSize));
@@ -617,7 +730,10 @@ function renderFetchButtons() {
   visibleButton.textContent = `Fetch visible (${humanBytes(state.pending.bytes)})`;
 
   const all = everythingPending();
-  const allBytes = all.reduce((sum, job) => sum + (job.fileSize || job.narSize), 0);
+  const allBytes = all.reduce(
+    (sum, job) => sum + (job.fileSize || job.narSize),
+    0,
+  );
   const allButton = $("fetch-all");
   allButton.hidden = state.model === null || all.length === 0;
   allButton.textContent = state.allArmed
@@ -698,7 +814,10 @@ function hitTest(wx, wy) {
 // byte.
 function pathCenter(id) {
   const path = state.model.paths[id];
-  const [x, y] = d2xy(state.model.order, path.start + Math.floor(path.narSize / 2));
+  const [x, y] = d2xy(
+    state.model.order,
+    path.start + Math.floor(path.narSize / 2),
+  );
   return [x + 0.5, y + 0.5];
 }
 
@@ -707,7 +826,11 @@ function flyToPath(id) {
   const [cx, cy] = pathCenter(id);
   const side = Math.max(FLY_MIN_SIDE, Math.sqrt(path.narSize));
   const camera = map.camera;
-  map.flyTo(cx, cy, Math.log2((Math.min(camera.width, camera.height) * FLY_FILL) / side));
+  map.flyTo(
+    cx,
+    cy,
+    Math.log2((Math.min(camera.width, camera.height) * FLY_FILL) / side),
+  );
 }
 
 const hex = (n) => `0x${n.toString(16)}`;
@@ -730,7 +853,14 @@ function readThroughWorker(name, kind, offset, length) {
   const requestId = nextRead;
   return new Promise((resolve, reject) => {
     readRequests.set(requestId, { resolve, reject });
-    tileWorker.postMessage({ type: "read", requestId, name, kind, offset, length });
+    tileWorker.postMessage({
+      type: "read",
+      requestId,
+      name,
+      kind,
+      offset,
+      length,
+    });
   });
 }
 tileWorker.addEventListener("message", ({ data }) => {
@@ -750,7 +880,11 @@ function elfSections(path, entry) {
   const key = `${path.narHash}/${entry.contentOffset}`;
   if (!elfCache.has(key)) {
     const read = (offset, length) =>
-      readNar(path, entry.contentOffset + offset, Math.max(0, Math.min(length, entry.size - offset)));
+      readNar(
+        path,
+        entry.contentOffset + offset,
+        Math.max(0, Math.min(length, entry.size - offset)),
+      );
     elfCache.set(
       key,
       read(0, 4)
@@ -772,7 +906,10 @@ function tooltipContent(hit) {
     analysis ? `closure ${humanBytes(analysis.closure[id])}` : null,
   ].filter(Boolean);
 
-  const lines = [el("div", { class: "tip-name" }, path.name), el("div", {}, sizes.join(" · "))];
+  const lines = [
+    el("div", { class: "tip-name" }, path.name),
+    el("div", {}, sizes.join(" · ")),
+  ];
   const fileLine = el("div", { class: "tip-file" });
   if (hit.entry !== null) {
     fileLine.textContent = `${hit.entry.path || "(file)"} +${hex(hit.local - hit.entry.contentOffset)}`;
@@ -786,7 +923,10 @@ function tooltipContent(hit) {
           fileLine.textContent += ` · ${elf.reason}`;
           return;
         }
-        const section = sectionAt(elf.sections, hit.local - hit.entry.contentOffset);
+        const section = sectionAt(
+          elf.sections,
+          hit.local - hit.entry.contentOffset,
+        );
         if (section !== null) {
           fileLine.textContent = `${hit.entry.path} · ${section.name} +${hex(hit.local - hit.entry.contentOffset - section.offset)}`;
         }
@@ -796,11 +936,19 @@ function tooltipContent(hit) {
     lines.push(el("div", { class: "muted" }, `NAR offset ${hex(hit.local)}`));
   }
   if (hit.ref !== null) {
-    lines.push(el("div", { class: "tip-ref" }, `→ ${state.model.paths[hit.ref.target].storePath}`));
+    lines.push(
+      el(
+        "div",
+        { class: "tip-ref" },
+        `→ ${state.model.paths[hit.ref.target].storePath}`,
+      ),
+    );
   }
   const bits = state.bits[id];
   if (!(bits & PathState.RAW)) {
-    lines.push(el("div", { class: "muted" }, loadStateText(panelContext(), id)));
+    lines.push(
+      el("div", { class: "muted" }, loadStateText(panelContext(), id)),
+    );
   }
   return lines;
 }
@@ -816,10 +964,14 @@ function showTooltip(hit, point) {
   }
   const shell = $("map-shell");
   const margin = 14;
-  const x = Math.min(point.cssX + margin, shell.clientWidth - tooltip.offsetWidth - 4);
-  const y = point.cssY + margin + tooltip.offsetHeight > shell.clientHeight
-    ? point.cssY - tooltip.offsetHeight - margin
-    : point.cssY + margin;
+  const x = Math.min(
+    point.cssX + margin,
+    shell.clientWidth - tooltip.offsetWidth - 4,
+  );
+  const y =
+    point.cssY + margin + tooltip.offsetHeight > shell.clientHeight
+      ? point.cssY - tooltip.offsetHeight - margin
+      : point.cssY + margin;
   tooltip.style.transform = `translate(${Math.max(4, x)}px, ${Math.max(4, y)}px)`;
 }
 
@@ -840,7 +992,10 @@ function onHover(point) {
     map.setHover(NO_PATH, 0, null);
     return;
   }
-  const refLine = hit.ref === null ? null : { from: [hit.x + 0.5, hit.y + 0.5], to: pathCenter(hit.ref.target) };
+  const refLine =
+    hit.ref === null
+      ? null
+      : { from: [hit.x + 0.5, hit.y + 0.5], to: pathCenter(hit.ref.target) };
   map.setHover(hit.id, hit.ordinal, refLine);
   showTooltip(hit, point);
 }
@@ -935,10 +1090,72 @@ for (const link of document.querySelectorAll("#panel-tabs a")) {
 
 // ---------- toolbar ----------
 
+// What each mode's colours mean: a title for the button and the dots
+// under the toolbar.
+const HATCH = { hatch: true, label: "hatched: not fetched yet" };
+const MODE_HELP = {
+  [Mode.BYTES]: {
+    title:
+      "each byte by value, once zoomed in; a mix of byte classes further out",
+    dots: [
+      { color: "#000000", label: "0x00" },
+      { color: "#33ad59", label: "control" },
+      { color: "#4080f2", label: "printable ASCII" },
+      { color: "#eb5933", label: "high bytes" },
+      { color: "#ffffff", label: "0xff" },
+      HATCH,
+    ],
+  },
+  [Mode.CLASSES]: {
+    title: "the mix of zero, control, ASCII and high bytes at every zoom",
+    dots: [
+      { color: "#08080a", label: "zero" },
+      { color: "#33ad59", label: "control" },
+      { color: "#4080f2", label: "ASCII" },
+      { color: "#eb5933", label: "high" },
+      HATCH,
+    ],
+  },
+  [Mode.ENTROPY]: {
+    title:
+      "Shannon entropy per 256 bytes: compressed data bright, text and padding dark",
+    dots: [
+      { color: "#0a0829", label: "low: padding, text" },
+      { color: "#bd3861", label: "middling: code" },
+      { color: "#f78c24", label: "high" },
+      { color: "#fdf399", label: "compressed or random" },
+      HATCH,
+    ],
+  },
+  [Mode.PACKAGE]: {
+    title: "one hue per package, brighter where fetched bytes are dense",
+    dots: [{ color: "#7a8fd6", label: "one hue per package" }, HATCH],
+  },
+};
+
 function renderModes() {
   for (const button of document.querySelectorAll("#modes button")) {
-    button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.mode === state.mode),
+    );
+    button.title = MODE_HELP[button.dataset.mode].title;
   }
+  $("mode-legend").replaceChildren(
+    ...MODE_HELP[state.mode].dots.map((dot) =>
+      el(
+        "li",
+        {},
+        el(
+          "i",
+          dot.hatch
+            ? { class: "hatch" }
+            : { style: `background: ${dot.color}` },
+        ),
+        dot.label,
+      ),
+    ),
+  );
 }
 
 for (const mode of MODES) {
@@ -961,48 +1178,81 @@ for (const mode of MODES) {
 }
 renderModes();
 
+function searchRow(path) {
+  return el(
+    "li",
+    {
+      "data-id": path.id,
+      onpointerdown: (event) => {
+        event.preventDefault();
+        pick(path.id);
+      },
+    },
+    el("span", {}, path.name),
+    el("span", { class: "muted" }, humanBytes(path.narSize)),
+  );
+}
+
+// Matches for the query, or with nothing typed yet, the roots and the
+// largest paths, so the box shows what there is to find.
 function renderSearch() {
-  const query = $("search").value.trim().toLowerCase();
+  const input = $("search");
+  const query = input.value.trim().toLowerCase();
   const results = $("search-results");
-  if (query === "" || state.model === null) {
+  if (state.model === null || document.activeElement !== input) {
     results.hidden = true;
     return;
   }
-  const matches = state.model.paths
+
+  const { paths, roots } = state.model;
+  if (query === "") {
+    const rootSet = new Set(roots);
+    const largest = [...paths]
+      .filter((p) => !rootSet.has(p.id))
+      .sort((a, b) => b.narSize - a.narSize)
+      .slice(0, SEARCH_LIMIT - Math.min(roots.length, 2));
+    results.replaceChildren(
+      el("li", { class: "heading" }, roots.length === 1 ? "root" : "roots"),
+      ...roots.slice(0, 2).map((id) => searchRow(paths[id])),
+      el("li", { class: "heading" }, "largest paths"),
+      ...largest.map(searchRow),
+    );
+    results.hidden = false;
+    return;
+  }
+
+  const matches = paths
     .filter((p) => p.name.toLowerCase().includes(query))
-    .sort((a, b) => a.name.indexOf(query) - b.name.indexOf(query) || b.narSize - a.narSize)
+    .sort(
+      (a, b) =>
+        a.name.indexOf(query) - b.name.indexOf(query) || b.narSize - a.narSize,
+    )
     .slice(0, SEARCH_LIMIT);
   results.replaceChildren(
-    ...matches.map((p) =>
-      el(
-        "li",
-        {
-          onpointerdown: (event) => {
-            event.preventDefault();
-            pick(p.id);
-          },
-        },
-        el("span", {}, p.name),
-        el("span", { class: "muted" }, humanBytes(p.narSize)),
-      ),
-    ),
+    ...(matches.length > 0
+      ? matches.map(searchRow)
+      : [el("li", { class: "heading" }, `no path named like "${query}"`)]),
   );
-  results.hidden = matches.length === 0;
+  results.hidden = false;
 }
 
 function pick(id) {
   $("search").value = "";
+  $("search").blur();
   $("search-results").hidden = true;
   select(id, true);
 }
 
 $("search").addEventListener("input", renderSearch);
+$("search").addEventListener("focus", renderSearch);
 $("search").addEventListener("keydown", (event) => {
   if (event.key !== "Enter") {
     return;
   }
-  const first = $("search-results").querySelector("li");
-  first?.dispatchEvent(new PointerEvent("pointerdown"));
+  const first = $("search-results").querySelector("li[data-id]");
+  if (first !== null) {
+    pick(Number(first.dataset.id));
+  }
 });
 $("search").addEventListener("blur", () => {
   $("search-results").hidden = true;
@@ -1048,7 +1298,9 @@ $("pkg-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const pkgs = words($("pkg-input").value).map((spec) => {
     const at = spec.lastIndexOf("@");
-    return at <= 0 ? { attr: spec, version: null } : { attr: spec.slice(0, at), version: spec.slice(at + 1) };
+    return at <= 0
+      ? { attr: spec, version: null }
+      : { attr: spec.slice(0, at), version: spec.slice(at + 1) };
   });
   navigate({ paths: [], pkgs, json: null });
 });
@@ -1093,7 +1345,9 @@ $("caches-input").addEventListener("input", () => {
   try {
     state.caches = parseSubstituters($("caches-input").value);
     $("caches-status").textContent =
-      state.caches.length === 0 ? "" : `${state.caches.length} extra caches; they apply to the next closure loaded.`;
+      state.caches.length === 0
+        ? ""
+        : `${state.caches.length} extra caches; they apply to the next closure loaded.`;
     $("caches-status").classList.remove("error");
     scheduleUrl();
   } catch (err) {
@@ -1102,31 +1356,33 @@ $("caches-input").addEventListener("input", () => {
   }
 });
 
-// The featured closures, as links that load in place.
-function renderFeatured() {
-  const links = FEATURED.map((featured) => {
-    const source = { paths: [featured.path], pkgs: [], json: null };
-    return el(
-      "a",
-      {
-        href: writeUrl(source),
-        onclick: (event) => {
-          event.preventDefault();
-          navigate(source);
-        },
+// The featured closures, as links that load in place. One that names a
+// cache puts it in the link, the same as the caches lane would.
+function featuredLink(featured) {
+  const source = { paths: [featured.path], pkgs: [], json: null };
+  const caches = featured.cache ? parseSubstituters(featured.cache) : [];
+  return el(
+    "a",
+    {
+      href: writeUrl({ ...source, caches }),
+      title: featured.title,
+      onclick: (event) => {
+        event.preventDefault();
+        navigate(source, null, caches);
       },
-      featured.label,
-    );
-  });
-  const joined = links.flatMap((link, i) => (i === 0 ? [link] : [" · ", link]));
-  $("examples").append(...joined);
-  $("empty-examples").append(...links.map((link) => el("li", {}, link.cloneNode(true))));
-  for (const [i, link] of [...$("empty-examples").querySelectorAll("a")].entries()) {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      navigate({ paths: [FEATURED[i].path], pkgs: [], json: null });
-    });
-  }
+    },
+    featured.label,
+  );
+}
+
+function renderFeatured() {
+  const links = FEATURED.map(featuredLink);
+  $("examples").append(
+    ...links.flatMap((link, i) => (i === 0 ? [link] : [" · ", link])),
+  );
+  $("empty-examples").append(
+    ...FEATURED.map((featured) => el("li", {}, featuredLink(featured))),
+  );
 }
 
 // The site build substitutes the derivation's own $out into STORE_PATH, so

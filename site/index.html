@@ -34,7 +34,9 @@
         <a href="https://nixmultiverse.com/" title="every version of every package nixpkgs ever shipped">
           Multiverse
         </a>
-        <a href="https://trynix.dev/" title="boot anything nixpkgs ever shipped, in your browser">trynix</a>
+        <a href="https://trynix.dev/" title="trynix: boot anything nixpkgs ever shipped, in your browser">
+          Boot a package
+        </a>
         <a
           href="https://fzakaria.github.io/grail/"
           title="grail: solve version-range queries over the multiverse index"
@@ -128,7 +130,13 @@
       <div id="toolbar">
         <div id="modes" role="group" aria-label="colour mode"></div>
         <div class="search-wrap">
-          <input id="search" type="search" spellcheck="false" autocomplete="off" placeholder="find a path…" />
+          <input
+            id="search"
+            type="search"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="find a store path by name: glibc, python3…"
+          />
           <ul id="search-results" hidden></ul>
         </div>
         <div class="toolbar-actions">
@@ -139,6 +147,8 @@
           <button id="save-png" type="button">Save PNG</button>
         </div>
       </div>
+
+      <ul id="mode-legend" class="muted" aria-live="polite"></ul>
 
       <div id="map-layout">
         <div id="map-shell" tabindex="0">

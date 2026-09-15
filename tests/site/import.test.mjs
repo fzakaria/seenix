@@ -14,7 +14,8 @@ const fixture = (name) =>
 
 const NCURSES = "ffyzkisqs4vc4mg28bwwlyqjf8i9ph6b";
 const GLIBC = "7nbi22pcc92y2fqbkyp7h3srvvklmckb";
-const GLIBC_HASH = "sha256:0616hw8gp2ac9l6z27p966lbxpd90m8wsxb8vq29rz1cbr1vvisg";
+const GLIBC_HASH =
+  "sha256:0616hw8gp2ac9l6z27p966lbxpd90m8wsxb8vq29rz1cbr1vvisg";
 
 // The fields every shape must agree on, sorted by digest.
 const summary = ({ records }) =>
@@ -47,7 +48,10 @@ for (const name of [
     assert.equal(glibc.narHash, GLIBC_HASH);
     assert.equal(glibc.narSize, 30180096);
     assert.ok(glibc.references.includes(GLIBC));
-    assert.equal(glibc.deriver, "fynmmhgd2qyxbxxs0cii34zj37mv3xcm-glibc-2.40-224.drv");
+    assert.equal(
+      glibc.deriver,
+      "fynmmhgd2qyxbxxs0cii34zj37mv3xcm-glibc-2.40-224.drv",
+    );
   });
 }
 

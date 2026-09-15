@@ -39,9 +39,12 @@ export class Fetcher {
     this.lastProtected = new Set();
 
     this.workers = Array.from({ length: NAR_WORKERS }, () => {
-      const worker = new Worker(new URL("./workers/nar-worker.js", import.meta.url), {
-        type: "module",
-      });
+      const worker = new Worker(
+        new URL("./workers/nar-worker.js", import.meta.url),
+        {
+          type: "module",
+        },
+      );
       worker.onmessage = ({ data }) => this.receive(worker, data);
       return worker;
     });
@@ -196,7 +199,11 @@ export class Fetcher {
         }
         this.onEvent(FetchEvent.DONE, job, data);
       } else {
-        this.onEvent(data.aborted ? FetchEvent.DROPPED : FetchEvent.FAILED, job, data);
+        this.onEvent(
+          data.aborted ? FetchEvent.DROPPED : FetchEvent.FAILED,
+          job,
+          data,
+        );
       }
     }
     this.pump();

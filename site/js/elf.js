@@ -86,7 +86,10 @@ export async function readElfSections(readAt) {
   const names =
     nameTable === undefined
       ? new Uint8Array(0)
-      : await readAt(nameTable.offset, Math.min(nameTable.size, MAX_NAME_TABLE));
+      : await readAt(
+          nameTable.offset,
+          Math.min(nameTable.size, MAX_NAME_TABLE),
+        );
   const decoder = new TextDecoder();
   for (const section of sections) {
     const end = names.indexOf(0, section.nameOffset);

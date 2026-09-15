@@ -60,9 +60,15 @@ test("digestOf takes the digest half of a store basename", () => {
 // CA come back as written, and null when the narinfo has none.
 test("parseNarinfo keeps Deriver, and CA when present", async () => {
   const info = parseNarinfo(await readFile(fixture, "utf8"));
-  assert.equal(info.deriver, "2fixture2fixture2fixture2fixture-hello-2.12.2.drv");
+  assert.equal(
+    info.deriver,
+    "2fixture2fixture2fixture2fixture-hello-2.12.2.drv",
+  );
   assert.equal(info.ca, null);
-  assert.equal(parseNarinfo("CA: fixed:r:sha256:abc\n").ca, "fixed:r:sha256:abc");
+  assert.equal(
+    parseNarinfo("CA: fixed:r:sha256:abc\n").ca,
+    "fixed:r:sha256:abc",
+  );
 });
 
 // Tests the closure walk against an in-memory cache: a diamond is fetched
@@ -88,7 +94,12 @@ test("walkClosure visits a diamond once and reports what is missing", async () =
   };
 
   const { closure, missing } = await walkClosure([d("a")], fetchInfo);
-  assert.deepEqual([...closure.keys()].sort(), [d("a"), d("b"), d("c"), d("d")]);
+  assert.deepEqual([...closure.keys()].sort(), [
+    d("a"),
+    d("b"),
+    d("c"),
+    d("d"),
+  ]);
   assert.deepEqual([...missing.keys()], [d("z")]);
   assert.equal(fetched.length, 5);
 });

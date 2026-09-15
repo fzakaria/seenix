@@ -35,7 +35,15 @@ export function el(tag, props = {}, ...children) {
 }
 
 // Segment colours for the statistics bars, in order of share.
-const SERIES = ["#4f6bed", "#3fa34d", "#e0a030", "#c94f4f", "#8e5bd0", "#2aa9b8", "#9a9a9a"];
+const SERIES = [
+  "#4f6bed",
+  "#3fa34d",
+  "#e0a030",
+  "#c94f4f",
+  "#8e5bd0",
+  "#2aa9b8",
+  "#9a9a9a",
+];
 
 // The byte classes in the colours the map draws them with.
 const CLASS_SERIES = [
@@ -54,7 +62,12 @@ const LIST_LIMIT = 40;
 function pathLink(ctx, id, label = ctx.model.paths[id].name) {
   return el(
     "button",
-    { class: "path-link", type: "button", title: ctx.model.paths[id].storePath, onclick: () => ctx.select(id, true) },
+    {
+      class: "path-link",
+      type: "button",
+      title: ctx.model.paths[id].storePath,
+      onclick: () => ctx.select(id, true),
+    },
     label,
   );
 }
@@ -63,7 +76,9 @@ function facts(rows) {
   return el(
     "dl",
     { class: "facts" },
-    rows.filter(Boolean).flatMap(([term, value]) => [el("dt", {}, term), el("dd", {}, value)]),
+    rows
+      .filter(Boolean)
+      .flatMap(([term, value]) => [el("dt", {}, term), el("dd", {}, value)]),
   );
 }
 
@@ -114,20 +129,34 @@ function ratio(path) {
 }
 
 function copyButton(ctx, text) {
-  return el("button", { class: "copy", type: "button", onclick: () => ctx.copy(text) }, "copy");
+  return el(
+    "button",
+    { class: "copy", type: "button", onclick: () => ctx.copy(text) },
+    "copy",
+  );
 }
 
 export function renderInspect(container, ctx) {
   container.replaceChildren();
   if (ctx.model === null) {
-    container.append(el("p", { class: "muted" }, "Load a closure to inspect its paths."));
+    container.append(
+      el("p", { class: "muted" }, "Load a closure to inspect its paths."),
+    );
     return;
   }
   if (ctx.selected < 0) {
     container.append(
-      el("p", { class: "muted" }, "Hover over the map to see a path; click or tap to pin it here."),
+      el(
+        "p",
+        { class: "muted" },
+        "Hover over the map to see a path; click or tap to pin it here.",
+      ),
       el("h3", {}, ctx.model.roots.length === 1 ? "Root" : "Roots"),
-      el("ul", { class: "plain" }, ctx.model.roots.map((id) => el("li", {}, pathLink(ctx, id)))),
+      el(
+        "ul",
+        { class: "plain" },
+        ctx.model.roots.map((id) => el("li", {}, pathLink(ctx, id))),
+      ),
     );
     return;
   }
@@ -144,12 +173,22 @@ export function renderInspect(container, ctx) {
     }
     named.replaceChildren(
       "nixpkgs ",
-      el("a", { href: ctx.multiverseUrl(hit), class: "out" }, `${hit.attr} ${hit.version}`),
+      el(
+        "a",
+        { href: ctx.multiverseUrl(hit), class: "out" },
+        `${hit.attr} ${hit.version}`,
+      ),
     );
   });
   container.append(
     el("h2", { class: "path-name" }, path.name),
-    el("p", { class: "store-path" }, el("code", {}, path.storePath), " ", copyButton(ctx, path.storePath)),
+    el(
+      "p",
+      { class: "store-path" },
+      el("code", {}, path.storePath),
+      " ",
+      copyButton(ctx, path.storePath),
+    ),
     named,
   );
 
@@ -173,12 +212,30 @@ export function renderInspect(container, ctx) {
   const bits = ctx.bits[id];
   const actions = el("p", { class: "actions" });
   if (ctx.fetchable(path) && !(bits & (PathState.RAW | PathState.LOADING))) {
-    actions.append(el("button", { type: "button", onclick: () => ctx.fetchPath(id) }, "Fetch this path"));
+    actions.append(
+      el(
+        "button",
+        { type: "button", onclick: () => ctx.fetchPath(id) },
+        "Fetch this path",
+      ),
+    );
   }
   if (bits & PathState.RAW) {
-    actions.append(el("button", { type: "button", onclick: () => ctx.evictPath(id) }, "Evict raw bytes"));
+    actions.append(
+      el(
+        "button",
+        { type: "button", onclick: () => ctx.evictPath(id) },
+        "Evict raw bytes",
+      ),
+    );
   }
-  actions.append(el("button", { type: "button", onclick: () => ctx.select(id, true) }, "Fly to"));
+  actions.append(
+    el(
+      "button",
+      { type: "button", onclick: () => ctx.select(id, true) },
+      "Fly to",
+    ),
+  );
   container.append(actions);
 
   // Why it is here.
@@ -189,13 +246,22 @@ export function renderInspect(container, ctx) {
       el(
         "ol",
         { class: "crumbs" },
-        chain.map((step) => el("li", {}, step === id ? el("span", {}, path.name) : pathLink(ctx, step))),
+        chain.map((step) =>
+          el(
+            "li",
+            {},
+            step === id ? el("span", {}, path.name) : pathLink(ctx, step),
+          ),
+        ),
       ),
     );
     const root = ctx.model.paths[chain[0]];
     if (chain.length > 1) {
       const command = `nix why-depends --precise ${root.storePath} ${path.storePath}`;
-      container.append(el("pre", { class: "command" }, command), copyButton(ctx, command));
+      container.append(
+        el("pre", { class: "command" }, command),
+        copyButton(ctx, command),
+      );
     }
   }
 
@@ -214,13 +280,26 @@ export function renderInspect(container, ctx) {
   const index = ctx.indexes.get(path.narHash);
   if (index !== undefined) {
     const regular = index.entries.filter((e) => e.type === EntryType.REGULAR);
-    const largest = [...regular].sort((a, b) => b.size - a.size).slice(0, TOP_FILES);
+    const largest = [...regular]
+      .sort((a, b) => b.size - a.size)
+      .slice(0, TOP_FILES);
     container.append(
-      el("h3", {}, `Files (${count(regular.length)}${index.truncated ? "+" : ""})`),
+      el(
+        "h3",
+        {},
+        `Files (${count(regular.length)}${index.truncated ? "+" : ""})`,
+      ),
       el(
         "ul",
         { class: "plain files" },
-        largest.map((e) => el("li", {}, el("code", {}, e.path || "(root)"), ` ${humanBytes(e.size)}`)),
+        largest.map((e) =>
+          el(
+            "li",
+            {},
+            el("code", {}, e.path || "(root)"),
+            ` ${humanBytes(e.size)}`,
+          ),
+        ),
       ),
     );
   }
@@ -235,7 +314,13 @@ export function renderInspect(container, ctx) {
         "ul",
         { class: "plain" },
         ids.slice(0, LIST_LIMIT).map((ref) => el("li", {}, pathLink(ctx, ref))),
-        ids.length > LIST_LIMIT ? el("li", { class: "muted" }, `and ${count(ids.length - LIST_LIMIT)} more`) : null,
+        ids.length > LIST_LIMIT
+          ? el(
+              "li",
+              { class: "muted" },
+              `and ${count(ids.length - LIST_LIMIT)} more`,
+            )
+          : null,
       ),
     );
   container.append(list("References", path.references));
@@ -273,7 +358,11 @@ function bar(segments, format) {
           {},
           el("i", { style: `background: ${s.color}` }),
           el("span", { class: "label" }, s.label),
-          el("span", { class: "value" }, `${percent(s.value, total)}${format ? ` · ${format(s)}` : ""}`),
+          el(
+            "span",
+            { class: "value" },
+            `${percent(s.value, total)}${format ? ` · ${format(s)}` : ""}`,
+          ),
         ),
       ),
     ),
@@ -284,7 +373,12 @@ function groupBy(paths, keyOf) {
   const groups = new Map();
   for (const path of paths) {
     const key = keyOf(path);
-    const group = groups.get(key) ?? { label: key, paths: 0, narSize: 0, fileSize: 0 };
+    const group = groups.get(key) ?? {
+      label: key,
+      paths: 0,
+      narSize: 0,
+      fileSize: 0,
+    };
     group.paths += 1;
     group.narSize += path.narSize;
     group.fileSize += path.fileSize;
@@ -292,13 +386,19 @@ function groupBy(paths, keyOf) {
   }
   return [...groups.values()]
     .sort((a, b) => b.narSize - a.narSize)
-    .map((group, i) => ({ ...group, value: group.narSize, color: SERIES[Math.min(i, SERIES.length - 1)] }));
+    .map((group, i) => ({
+      ...group,
+      value: group.narSize,
+      color: SERIES[Math.min(i, SERIES.length - 1)],
+    }));
 }
 
 export function renderStats(container, ctx) {
   container.replaceChildren();
   if (ctx.model === null) {
-    container.append(el("p", { class: "muted" }, "Load a closure to see its statistics."));
+    container.append(
+      el("p", { class: "muted" }, "Load a closure to see its statistics."),
+    );
     return;
   }
   const { paths } = ctx.model;
@@ -310,7 +410,10 @@ export function renderStats(container, ctx) {
     facts([
       ["Paths", count(paths.length)],
       ["Unpacked", humanBytes(narTotal)],
-      fileTotal > 0 && ["Download", `${humanBytes(fileTotal)} (${(narTotal / fileTotal).toFixed(1)}x)`],
+      fileTotal > 0 && [
+        "Download",
+        `${humanBytes(fileTotal)} (${(narTotal / fileTotal).toFixed(1)}x)`,
+      ],
       ["World", `2^${ctx.model.order} × 2^${ctx.model.order} pixels`],
     ]),
   );
@@ -322,10 +425,16 @@ export function renderStats(container, ctx) {
     bar(bySubstituter, (g) => `${count(g.paths)} paths`),
   );
 
-  const byCompression = groupBy(paths, (p) => (p.substituter === null ? "local-only" : p.compression));
+  const byCompression = groupBy(paths, (p) =>
+    p.substituter === null ? "local-only" : p.compression,
+  );
   container.append(
     el("h3", {}, "Compression"),
-    bar(byCompression, (g) => (g.fileSize > 0 ? `${humanBytes(g.fileSize)} download` : `${count(g.paths)} paths`)),
+    bar(byCompression, (g) =>
+      g.fileSize > 0
+        ? `${humanBytes(g.fileSize)} download`
+        : `${count(g.paths)} paths`,
+    ),
   );
 
   // Signatures.
@@ -361,11 +470,24 @@ export function renderStats(container, ctx) {
         .map((p) => [p.id, valueOf(p.id)])
         .sort((a, b) => b[1] - a[1])
         .slice(0, TOP_PATHS)
-        .map(([id, value]) => el("li", {}, pathLink(ctx, id), el("span", { class: "value" }, humanBytes(value)))),
+        .map(([id, value]) =>
+          el(
+            "li",
+            {},
+            pathLink(ctx, id),
+            el("span", { class: "value" }, humanBytes(value)),
+          ),
+        ),
     );
-  container.append(el("h3", {}, "Largest paths"), ranked((id) => paths[id].narSize));
+  container.append(
+    el("h3", {}, "Largest paths"),
+    ranked((id) => paths[id].narSize),
+  );
   if (ctx.analysis !== null) {
-    container.append(el("h3", {}, "Largest retained size"), ranked((id) => ctx.analysis.retained[id]));
+    container.append(
+      el("h3", {}, "Largest retained size"),
+      ranked((id) => ctx.analysis.retained[id]),
+    );
   }
 
   // What the fetched bytes are made of.
@@ -383,7 +505,8 @@ export function renderStats(container, ctx) {
     const chunks = records.length / SUMMARY_RECORD;
     for (let i = 0; i < chunks; i += 1) {
       const at = i * SUMMARY_RECORD;
-      const weight = i === chunks - 1 ? narSize - i * COARSE_CHUNK : COARSE_CHUNK;
+      const weight =
+        i === chunks - 1 ? narSize - i * COARSE_CHUNK : COARSE_CHUNK;
       const zero = records[at + Field.ZERO];
       const ascii = records[at + Field.ASCII];
       const high = records[at + Field.HIGH];
@@ -397,13 +520,25 @@ export function renderStats(container, ctx) {
   }
   container.append(el("h3", {}, "Bytes fetched"));
   if (summarised === 0) {
-    container.append(el("p", { class: "muted" }, "Nothing fetched yet. Zoom in, or fetch paths from the toolbar."));
+    container.append(
+      el(
+        "p",
+        { class: "muted" },
+        "Nothing fetched yet. Zoom in, or fetch paths from the toolbar.",
+      ),
+    );
   } else {
     container.append(
       facts([
-        ["Summarised", `${humanBytes(summarised)} of ${humanBytes(narTotal)} (${percent(summarised, narTotal)})`],
+        [
+          "Summarised",
+          `${humanBytes(summarised)} of ${humanBytes(narTotal)} (${percent(summarised, narTotal)})`,
+        ],
         ["Paths", `${count(summarisedPaths)} of ${count(paths.length)}`],
-        ["Mean entropy", `${((entropy / summarised / 255) * 8).toFixed(2)} bits/byte`],
+        [
+          "Mean entropy",
+          `${((entropy / summarised / 255) * 8).toFixed(2)} bits/byte`,
+        ],
       ]),
       bar(CLASS_SERIES.map((s, i) => ({ ...s, value: mix[i] }))),
     );
@@ -444,14 +579,16 @@ export function renderStats(container, ctx) {
       el(
         "ol",
         { class: "ranked" },
-        biggest.slice(0, TOP_FILES).map(({ id, entry }) =>
-          el(
-            "li",
-            {},
-            pathLink(ctx, id, `${paths[id].name}/${entry.path}`),
-            el("span", { class: "value" }, humanBytes(entry.size)),
+        biggest
+          .slice(0, TOP_FILES)
+          .map(({ id, entry }) =>
+            el(
+              "li",
+              {},
+              pathLink(ctx, id, `${paths[id].name}/${entry.path}`),
+              el("span", { class: "value" }, humanBytes(entry.size)),
+            ),
           ),
-        ),
       ),
     );
   }
@@ -474,7 +611,10 @@ export function renderStats(container, ctx) {
     container.append(
       el("h3", {}, "References"),
       facts([
-        ["Declared", `${count(declared)} across ${count(scanned)} scanned paths`],
+        [
+          "Declared",
+          `${count(declared)} across ${count(scanned)} scanned paths`,
+        ],
         ["Found in bytes", count(found)],
       ]),
     );
@@ -485,8 +625,16 @@ export function renderStats(container, ctx) {
     el("h3", {}, "This session"),
     facts([
       ["Downloaded", humanBytes(ctx.fetcher.sessionBytes)],
-      ["Raw on disk", `${humanBytes(ctx.fetcher.storedTotal)} of ${humanBytes(ctx.fetcher.budget)}`],
-      ["Storage", ctx.opfs ? "origin private file system" : "memory (no OPFS in this browser)"],
+      [
+        "Raw on disk",
+        `${humanBytes(ctx.fetcher.storedTotal)} of ${humanBytes(ctx.fetcher.budget)}`,
+      ],
+      [
+        "Storage",
+        ctx.opfs
+          ? "origin private file system"
+          : "memory (no OPFS in this browser)",
+      ],
     ]),
   );
 }

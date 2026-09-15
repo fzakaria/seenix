@@ -248,8 +248,22 @@ export class Renderer {
     gl.vertexAttribPointer(corner, 2, gl.FLOAT, false, 0, 0);
 
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    this.paths = this.texture(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 1, 1, new Uint8Array(4));
-    this.palette = this.texture(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 256, 1, bytePalette());
+    this.paths = this.texture(
+      gl.RGBA8,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      1,
+      1,
+      new Uint8Array(4),
+    );
+    this.palette = this.texture(
+      gl.RGBA8,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      256,
+      1,
+      bytePalette(),
+    );
   }
 
   texture(internal, format, type, width, height, data) {
@@ -260,7 +274,17 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, internal, width, height, 0, format, type, data);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      internal,
+      width,
+      height,
+      0,
+      format,
+      type,
+      data,
+    );
     return texture;
   }
 
@@ -268,7 +292,14 @@ export class Renderer {
     const gl = this.gl;
     return {
       data: this.texture(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, size, size, data),
-      ids: this.texture(gl.RG32UI, gl.RG_INTEGER, gl.UNSIGNED_INT, size, size, ids),
+      ids: this.texture(
+        gl.RG32UI,
+        gl.RG_INTEGER,
+        gl.UNSIGNED_INT,
+        size,
+        size,
+        ids,
+      ),
     };
   }
 
@@ -280,7 +311,14 @@ export class Renderer {
   setPathTable(bytes, rows) {
     const gl = this.gl;
     gl.deleteTexture(this.paths);
-    this.paths = this.texture(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, PATH_TABLE_WIDTH, rows, bytes);
+    this.paths = this.texture(
+      gl.RGBA8,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      PATH_TABLE_WIDTH,
+      rows,
+      bytes,
+    );
   }
 
   resize(width, height) {

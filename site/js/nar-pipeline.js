@@ -245,7 +245,10 @@ export async function processNar({
       `unpacked to ${narBytes} bytes, narinfo says ${narSize}`,
     );
   }
-  if (expected !== null && !sameBytes(hasher.digest("binary"), expected.bytes)) {
+  if (
+    expected !== null &&
+    !sameBytes(hasher.digest("binary"), expected.bytes)
+  ) {
     throw new NarError(
       Failure.HASH,
       "unpacked archive's sha256 does not match the narinfo",

@@ -155,7 +155,7 @@ export function closureSizes(references, sizes) {
   for (let c = 0; c < count; c += 1) {
     const base = c * words;
     for (const v of members[c]) {
-      bits[base + ((v / WORD_BITS) | 0)] |= 1 << v % WORD_BITS;
+      bits[base + ((v / WORD_BITS) | 0)] |= 1 << (v % WORD_BITS);
     }
     for (const v of members[c]) {
       for (const w of references[v]) {
@@ -259,7 +259,7 @@ export function dominators(references, roots) {
     return a;
   };
 
-  for (let changed = true; changed; ) {
+  for (let changed = true; changed;) {
     changed = false;
     for (const v of order) {
       if (v === root) {

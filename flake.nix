@@ -5,6 +5,15 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
+  # The example closure is published here; its dependencies are
+  # cache.nixos.org's.
+  nixConfig = {
+    extra-substituters = [ "https://seenix.cachix.org" ];
+    extra-trusted-public-keys = [
+      "seenix.cachix.org-1:J3smIV60apuKqx9is7E+VWO1EQpLnaWVv4O37CxWkHY="
+    ];
+  };
+
   outputs =
     { self, nixpkgs }:
     let
@@ -31,6 +40,10 @@
           # a checkout as site/vendor while working on it
           # (`ln -s "$(nix build .#vendor --print-out-paths)" site/vendor`)
           vendor = import ./nix/vendor.nix { inherit pkgs; };
+
+          # the two-cache example on the landing page, pushed to
+          # seenix.cachix.org (nix/example.nix)
+          example = import ./nix/example.nix { inherit pkgs; };
         }
       );
 

@@ -68,7 +68,8 @@ const handlers = {
     const sums = new Float64Array((chunks + 1) * FIELDS);
     for (let i = 0; i < chunks; i += 1) {
       for (let f = 0; f < FIELDS; f += 1) {
-        sums[(i + 1) * FIELDS + f] = sums[i * FIELDS + f] + records[i * FIELDS + f];
+        sums[(i + 1) * FIELDS + f] =
+          sums[i * FIELDS + f] + records[i * FIELDS + f];
       }
     }
     for (const id of ids) {
@@ -111,7 +112,11 @@ const handlers = {
 };
 
 self.onmessage = ({ data }) => {
-  if (data.type !== "layout" && data.type !== "read" && data.generation !== generation) {
+  if (
+    data.type !== "layout" &&
+    data.type !== "read" &&
+    data.generation !== generation
+  ) {
     return;
   }
   handlers[data.type]?.(data);
@@ -127,7 +132,12 @@ async function readNamed(name, kind, offset, length) {
   if (dirs === null) {
     throw new Error("no storage for raw bytes");
   }
-  return readSlice(kind === Kind.RAW ? dirs.raw : dirs.fine, name, offset, length);
+  return readSlice(
+    kind === Kind.RAW ? dirs.raw : dirs.fine,
+    name,
+    offset,
+    length,
+  );
 }
 
 // Raw bytes (when `withRaw`) and fine records for every readable path
@@ -138,7 +148,11 @@ async function gatherSources(start, end, withRaw) {
   const fine = new Map();
   const reads = [];
 
-  for (let id = pathAt(offsets, start); id >= 0 && id < count && offsets[id] < end; id += 1) {
+  for (
+    let id = pathAt(offsets, start);
+    id >= 0 && id < count && offsets[id] < end;
+    id += 1
+  ) {
     if (rawAvailable[id] === 0 || names[id] === null) {
       continue;
     }
@@ -200,7 +214,11 @@ function fromCoarse(a, b, midId, data, at) {
   }
   let weight = 0;
   const sums = [0, 0, 0, 0];
-  for (let id = pathAt(offsets, a); id >= 0 && id < count && offsets[id] < b; id += 1) {
+  for (
+    let id = pathAt(offsets, a);
+    id >= 0 && id < count && offsets[id] < b;
+    id += 1
+  ) {
     const p = prefix[id];
     if (p === undefined) {
       continue;
@@ -240,8 +258,14 @@ function fromFine(sources, a, b, id, data, at) {
     return false;
   }
   const records = held.records.length / FIELDS;
-  const r0 = Math.max(0, Math.floor((a - offsets[id]) / FINE_CHUNK) - held.first);
-  const r1 = Math.min(records, Math.ceil((b - offsets[id]) / FINE_CHUNK) - held.first);
+  const r0 = Math.max(
+    0,
+    Math.floor((a - offsets[id]) / FINE_CHUNK) - held.first,
+  );
+  const r1 = Math.min(
+    records,
+    Math.ceil((b - offsets[id]) / FINE_CHUNK) - held.first,
+  );
   if (r1 <= r0) {
     return false;
   }
@@ -307,7 +331,8 @@ async function build({ generation: requested, key, k, tx, ty }) {
   for (let v = 0; v < TILE_SIZE; v += 1) {
     for (let u = 0; u < TILE_SIZE; u += 1) {
       const i = v * TILE_SIZE + u;
-      const a = xy2d(texelOrder, tx * TILE_SIZE + u, ty * TILE_SIZE + v) * texelBytes;
+      const a =
+        xy2d(texelOrder, tx * TILE_SIZE + u, ty * TILE_SIZE + v) * texelBytes;
       if (a >= total) {
         ids[2 * i] = NO_PATH;
         continue;

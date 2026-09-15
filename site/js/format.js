@@ -15,14 +15,29 @@ export function humanBytes(n) {
   return `${value.toFixed(digits)} ${BYTE_UNITS[unit]}`;
 }
 
-// A share as a percentage: "37%", with one decimal under 10 so a small
-// slice does not read as zero.
+// A share as a percentage: "37%", one decimal under 10 and over 99 so a
+// small slice does not read as zero nor a large one as everything, and
+// "<0.1%" or ">99.9%" at the extremes.
+const PERCENT_FLOOR = 0.1;
+const PERCENT_CEILING = 99.9;
+const FINE_BELOW = 10;
+const FINE_ABOVE = 99;
+
 export function percent(part, whole) {
-  if (whole === 0) {
+  if (whole === 0 || part === 0) {
     return "0%";
   }
+  if (part === whole) {
+    return "100%";
+  }
   const value = (100 * part) / whole;
-  const digits = value < 10 && value > 0 ? 1 : 0;
+  if (value < PERCENT_FLOOR) {
+    return `<${PERCENT_FLOOR}%`;
+  }
+  if (value > PERCENT_CEILING) {
+    return `>${PERCENT_CEILING}%`;
+  }
+  const digits = value < FINE_BELOW || value > FINE_ABOVE ? 1 : 0;
   return `${value.toFixed(digits)}%`;
 }
 

@@ -21,7 +21,12 @@ const BITS_PER_BYTE = 8;
 const BYTE_VALUES = 256;
 
 // Every byte value's class.
-export const ByteClass = Object.freeze({ ZERO: 0, ASCII: 1, HIGH: 2, CONTROL: 3 });
+export const ByteClass = Object.freeze({
+  ZERO: 0,
+  ASCII: 1,
+  HIGH: 2,
+  CONTROL: 3,
+});
 const CLASS_COUNT = 4;
 const TAB = 0x09;
 const NEWLINE = 0x0a;
