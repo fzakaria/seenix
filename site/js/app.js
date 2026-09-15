@@ -4,9 +4,11 @@
 import { packageColor, parseHexColor } from "./colors.js";
 import {
   AUTO_FETCH_BYTES,
+  AUTO_FETCH_DEEP_BYTES,
   AUTO_FETCH_LOD,
   FEATURED,
   LOD_COARSE,
+  LOD_FINE,
   MEMORY_BUDGET_BYTES,
   RAW_BUDGET_BYTES,
 } from "./config.js";
@@ -19,7 +21,14 @@ import { MapView } from "./map.js";
 import { identify, multiverseUrl, resolvePackage } from "./multiverse.js";
 import { buildFileLookup, ordinalAt } from "./narindex.js";
 import { mapConcurrent } from "./net.js";
-import { el, loadStateText, renderInspect, renderStats } from "./panel.js";
+import { PackagePicker } from "./packages.js";
+import {
+  el,
+  fill,
+  loadStateText,
+  renderInspect,
+  renderStats,
+} from "./panel.js";
 import { refAt } from "./refscan.js";
 import { closureFromJson, closureFromPaths } from "./source.js";
 import {
@@ -558,6 +567,9 @@ function onFetchEvent(type, job, data) {
   } else if (type === FetchEvent.FAILED) {
     state.errors.set(job.narHash, data.message);
     setBits(ids, PathState.FAILED, PathState.LOADING);
+  } else if (type === FetchEvent.PROGRESS) {
+    renderFetchChip();
+    return;
   } else if (type === FetchEvent.DONE) {
     finishFetch(job.narHash, ids, data);
   } else if (type === FetchEvent.EVICT) {
@@ -698,7 +710,8 @@ function updateFetching() {
   if (needRaw) {
     fetcher.touch(visibleHashes);
   }
-  if (k <= AUTO_FETCH_LOD && bytes > 0 && bytes <= AUTO_FETCH_BYTES) {
+  const autoLimit = k < LOD_FINE ? AUTO_FETCH_DEEP_BYTES : AUTO_FETCH_BYTES;
+  if (k <= AUTO_FETCH_LOD && bytes > 0 && bytes <= autoLimit) {
     fetcher.request([...jobs.values()], false);
     state.pending = { bytes: 0, jobs: [] };
   } else {
@@ -732,7 +745,105 @@ function everythingPending() {
   return [...jobs.values()];
 }
 
+// The notice on the map itself: progress while NARs download, and what the
+// view is missing with a button to fetch it, so the reader never waits on
+// a hatched region without knowing why.
+function renderFetchChip() {
+  const chip = $("fetch-chip");
+  const jobs = [...fetcher.jobs.values()];
+  const nameOf = (hash) => {
+    const ids = state.byHash.get(hash);
+    return ids === undefined ? "a path" : state.model.paths[ids[0]].name;
+  };
+
+  if (jobs.length > 0) {
+    const loading = jobs.filter((job) => job.worker !== null);
+    const total = jobs.reduce(
+      (sum, job) => sum + (job.fileSize || job.narSize),
+      0,
+    );
+    const done = jobs.reduce((sum, job) => sum + job.compressed, 0);
+    const first = loading[0] ?? jobs[0];
+    const others = jobs.length - 1;
+    fill(
+      chip,
+      el(
+        "div",
+        { class: "chip-line" },
+        `Downloading ${nameOf(first.narHash)}`,
+        others > 0
+          ? el("span", { class: "muted" }, ` and ${count(others)} more`)
+          : null,
+      ),
+      el(
+        "div",
+        { class: "chip-bar" },
+        el("span", {
+          style: `width: ${Math.min(100, (100 * done) / Math.max(1, total)).toFixed(1)}%`,
+        }),
+      ),
+      el(
+        "div",
+        { class: "muted" },
+        `${humanBytes(done)} of ${humanBytes(total)}`,
+      ),
+      fetcher.explicitPending
+        ? el(
+            "button",
+            {
+              type: "button",
+              onclick: () => {
+                fetcher.cancelExplicit();
+                renderFetchButtons();
+              },
+            },
+            "Cancel",
+          )
+        : null,
+    );
+    chip.hidden = false;
+    return;
+  }
+
+  if (state.pending.bytes > 0) {
+    const names = state.pending.jobs.map((job) => nameOf(job.narHash));
+    fill(
+      chip,
+      el(
+        "div",
+        { class: "chip-line" },
+        names.length === 1
+          ? `${names[0]} is not fetched`
+          : `${count(names.length)} paths here are not fetched`,
+      ),
+      el(
+        "div",
+        { class: "muted" },
+        `${humanBytes(state.pending.bytes)} to download; larger views wait to be asked`,
+      ),
+      el(
+        "button",
+        {
+          type: "button",
+          onclick: () => {
+            fetcher.request(state.pending.jobs, true);
+            fetcher.pump();
+            state.pending = { bytes: 0, jobs: [] };
+            renderFetchButtons();
+          },
+        },
+        `Fetch ${humanBytes(state.pending.bytes)}`,
+      ),
+    );
+    chip.hidden = false;
+    return;
+  }
+
+  chip.hidden = true;
+}
+
 function renderFetchButtons() {
+  renderFetchChip();
   const visibleButton = $("fetch-visible");
   visibleButton.hidden = state.pending.bytes === 0;
   visibleButton.textContent = `Fetch visible (${humanBytes(state.pending.bytes)})`;
@@ -1061,6 +1172,7 @@ function select(id, fly = false) {
 
 function panelContext() {
   return {
+    substituters: substituters(),
     model: state.model,
     bits: state.bits,
     byHash: state.byHash,
@@ -1327,6 +1439,24 @@ const words = (text) => text.split(/\s+/).filter(Boolean);
 $("path-form").addEventListener("submit", (event) => {
   event.preventDefault();
   navigate({ paths: words($("store-path").value), pkgs: [], json: null });
+});
+
+// The package lane completes attributes and versions, lists versions with
+// links to nixmultiverse.com, and maps the one picked.
+new PackagePicker({
+  input: $("pkg-input"),
+  dropdown: $("pkg-complete"),
+  results: $("pkg-results"),
+  current: (version) =>
+    state.source.pkgs.some(
+      (p) => p.attr === version.attr && p.version === version.version,
+    ),
+  onPick: (version) =>
+    navigate({
+      paths: [],
+      pkgs: [{ attr: version.attr, version: version.version }],
+      json: null,
+    }),
 });
 
 $("pkg-form").addEventListener("submit", (event) => {

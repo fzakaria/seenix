@@ -62,6 +62,10 @@ export const LOD_COARSE = 6;
 export const AUTO_FETCH_LOD = LOD_COARSE;
 export const AUTO_FETCH_BYTES = 64 * 1024 * 1024;
 
+// Zoomed in far enough that texels come from raw bytes, the reader is
+// looking at one path's bytes, so a larger download starts on its own.
+export const AUTO_FETCH_DEEP_BYTES = 256 * 1024 * 1024;
+
 // A download whose path has been off screen this long, and is less than
 // this far along, is aborted.
 export const ABORT_OFFSCREEN_MS = 2000;
@@ -80,6 +84,11 @@ export const REF_HIT_CAP = 10_000;
 // bytes on the main thread for the hex overlay.
 export const GPU_TILE_CACHE = 192;
 export const CPU_TILE_CACHE = 32;
+
+// How many attributes the package lane lists for a query, and how many
+// completions its dropdown offers.
+export const PACKAGE_MATCHES = 12;
+export const PACKAGE_COMPLETIONS = 12;
 
 // How often a worker reports progress on one path.
 export const PROGRESS_INTERVAL_MS = 100;

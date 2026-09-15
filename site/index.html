@@ -63,13 +63,30 @@
 
     <section id="source">
       <nav id="lanes">
-        <a class="active" href="#" data-lane="path">Store path</a>
-        <a href="#" data-lane="pkg">Package</a>
+        <a class="active" href="#" data-lane="pkg">Package</a>
+        <a href="#" data-lane="path">Store path</a>
         <a href="#" data-lane="json">path-info JSON</a>
         <a href="#" data-lane="caches">Caches</a>
       </nav>
 
-      <div class="lane" data-lane="path">
+      <div class="lane" data-lane="pkg">
+        <form id="pkg-form" class="row-form">
+          <div class="complete-wrap">
+            <input
+              id="pkg-input"
+              type="search"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="search nixpkgs: firefox, python3@3.12.1, ripgrep jq"
+            />
+            <ul id="pkg-complete" hidden></ul>
+          </div>
+          <button type="submit">Map</button>
+        </form>
+        <div id="pkg-results"></div>
+      </div>
+
+      <div class="lane" data-lane="path" hidden>
         <form id="path-form" class="row-form">
           <input
             id="store-path"
@@ -77,19 +94,6 @@
             spellcheck="false"
             autocomplete="off"
             placeholder="/nix/store/<digest>-<name>, a basename, or a digest; several make one map"
-          />
-          <button type="submit">Map</button>
-        </form>
-      </div>
-
-      <div class="lane" data-lane="pkg" hidden>
-        <form id="pkg-form" class="row-form">
-          <input
-            id="pkg-input"
-            type="search"
-            spellcheck="false"
-            autocomplete="off"
-            placeholder="firefox, python3@3.12.1 — resolved against the multiverse index"
           />
           <button type="submit">Map</button>
         </form>
@@ -156,6 +160,7 @@
           <canvas id="overlay"></canvas>
           <canvas id="minimap"></canvas>
           <div id="tooltip" hidden></div>
+          <div id="fetch-chip" hidden></div>
           <div id="drop-hint" hidden>Drop nix path-info --json output</div>
           <div id="empty">
             <p>Pick a closure to map.</p>

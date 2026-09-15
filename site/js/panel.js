@@ -34,6 +34,17 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
+// Replace a node's children, skipping the null, undefined and false that
+// conditional children leave behind; replaceChildren itself would render
+// them as text.
+export function fill(node, ...children) {
+  node.replaceChildren(
+    ...children.filter(
+      (child) => child !== null && child !== undefined && child !== false,
+    ),
+  );
+}
+
 // Segment colours for the statistics bars, in order of share.
 const SERIES = [
   "#4f6bed",
@@ -72,13 +83,18 @@ function pathLink(ctx, id, label = ctx.model.paths[id].name) {
   );
 }
 
+// A definition list of [term, value] rows, or [term, value, explanation]
+// where the term explains itself on hover.
 function facts(rows) {
   return el(
     "dl",
     { class: "facts" },
     rows
       .filter(Boolean)
-      .flatMap(([term, value]) => [el("dt", {}, term), el("dd", {}, value)]),
+      .flatMap(([term, value, explanation]) => [
+        el("dt", explanation ? { class: "tip", title: explanation } : {}, term),
+        el("dd", {}, value),
+      ]),
   );
 }
 
@@ -112,8 +128,18 @@ function signatureText(ctx, id) {
   if (result === undefined) {
     return "checking…";
   }
+
+  // A signature names its key; hovering shows the public key it was
+  // checked against.
   if (result.verdict === Verified.SIGNED) {
-    return `signed by ${result.keyName}`;
+    const key = ctx.substituters.find((s) =>
+      s.key.startsWith(`${result.keyName}:`),
+    )?.key;
+    return el(
+      "span",
+      { class: "tip-value", title: key ? `checked against ${key}` : null },
+      `signed by ${result.keyName}`,
+    );
   }
   if (result.verdict === Verified.UNCHECKABLE) {
     return "not checkable in this browser";
@@ -215,7 +241,11 @@ export function renderInspect(container, ctx) {
     actions.append(
       el(
         "button",
-        { type: "button", onclick: () => ctx.fetchPath(id) },
+        {
+          type: "button",
+          title: "download this path's NAR now, whatever the zoom",
+          onclick: () => ctx.fetchPath(id),
+        },
         "Fetch this path",
       ),
     );
@@ -224,7 +254,12 @@ export function renderInspect(container, ctx) {
     actions.append(
       el(
         "button",
-        { type: "button", onclick: () => ctx.evictPath(id) },
+        {
+          type: "button",
+          title:
+            "delete this NAR's raw bytes and 256-byte summaries from this browser's storage. Its coarse summary and file index stay, so zoomed-out views still draw it; zooming in fetches it again.",
+          onclick: () => ctx.evictPath(id),
+        },
         "Evict raw bytes",
       ),
     );
@@ -272,7 +307,21 @@ export function renderInspect(container, ctx) {
       ["NarHash", el("code", {}, path.narHash ?? "unknown")],
       path.deriver && ["Deriver", el("code", {}, path.deriver)],
       path.ca && ["CA", el("code", {}, path.ca)],
-      ["Cache", path.substituter ?? LOCAL_LABEL_TEXT],
+      [
+        "Cache",
+        path.substituter === null
+          ? LOCAL_LABEL_TEXT
+          : el(
+              "a",
+              {
+                href: `${path.substituter}/${path.digest}.narinfo`,
+                title: "the narinfo this path was read from",
+                rel: "noopener",
+                target: "_blank",
+              },
+              path.substituter,
+            ),
+      ],
     ]),
   );
 
@@ -614,8 +663,13 @@ export function renderStats(container, ctx) {
         [
           "Declared",
           `${count(declared)} across ${count(scanned)} scanned paths`,
+          "store paths the narinfos list as References, over the paths whose NARs have been scanned",
         ],
-        ["Found in bytes", count(found)],
+        [
+          "Found in bytes",
+          count(found),
+          "distinct store paths whose 32-character hash appears somewhere in those NARs' bytes. Nix finds runtime references the same way, so this matches Declared unless a reference was added or removed by hand.",
+        ],
       ]),
     );
   }
@@ -624,16 +678,17 @@ export function renderStats(container, ctx) {
   container.append(
     el("h3", {}, "This session"),
     facts([
-      ["Downloaded", humanBytes(ctx.fetcher.sessionBytes)],
       [
-        "Raw on disk",
-        `${humanBytes(ctx.fetcher.storedTotal)} of ${humanBytes(ctx.fetcher.budget)}`,
+        "Downloaded this visit",
+        humanBytes(ctx.fetcher.sessionBytes),
+        "compressed bytes fetched from caches since this page loaded. NARs already in this browser's storage are read from disk and cost nothing.",
       ],
       [
-        "Storage",
+        ctx.opfs ? "Raw on disk" : "Raw in memory",
+        `${humanBytes(ctx.fetcher.storedTotal)} of ${humanBytes(ctx.fetcher.budget)}`,
         ctx.opfs
-          ? "origin private file system"
-          : "memory (no OPFS in this browser)",
+          ? "decompressed NARs kept in this browser's storage for deep zoom; the least recently viewed are evicted past the budget"
+          : "this browser offers no origin private file system, so decompressed NARs are held in memory and gone when the page closes",
       ],
     ]),
   );

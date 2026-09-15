@@ -190,6 +190,128 @@ button.armed {
   min-height: 1.5em;
 }
 
+/* The package lane: an input that completes attributes and versions, and
+   under it matching attributes, then one attribute's versions as pills. */
+.complete-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+#pkg-complete {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
+}
+#pkg-complete li {
+  padding: 0.3rem 0.6rem;
+  font:
+    13px ui-monospace,
+    monospace;
+  cursor: pointer;
+}
+#pkg-complete li:hover,
+#pkg-complete li.selected {
+  background: var(--code-bg);
+}
+#pkg-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.5rem 0;
+}
+#pkg-results p {
+  width: 100%;
+  margin: 0.2rem 0;
+}
+#pkg-results .attr,
+#pkg-results .pick {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.3rem 0.6rem;
+  color: var(--fg);
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+#pkg-results .attr {
+  cursor: pointer;
+}
+#pkg-results .attr:hover,
+#pkg-results .pick:not(.dead):hover {
+  border-color: var(--accent);
+}
+#pkg-results .pick.on {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, var(--code-bg));
+}
+#pkg-results .take {
+  min-height: 0;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+#pkg-results .take:disabled {
+  cursor: default;
+}
+#pkg-results .name {
+  font:
+    13px ui-monospace,
+    monospace;
+}
+#pkg-results .pick.dead {
+  opacity: 0.6;
+  border-style: dashed;
+}
+#pkg-results .pick.dead .name {
+  text-decoration-line: underline line-through;
+  text-decoration-style: dotted;
+}
+#pkg-results .note {
+  max-width: 42rem;
+  font-size: 13px;
+}
+
+/* A link out to nixmultiverse.com: a dotted underline until hovered. */
+.out {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.out:hover {
+  color: var(--accent);
+  text-decoration: underline solid;
+}
+
+/* A fact, or a value, that explains itself on hover. */
+.tip-value {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.facts dt.tip {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 /* The toolbar: modes, search, and actions, wrapping on narrow screens. */
 #toolbar {
   display: flex;
@@ -365,6 +487,49 @@ button.armed {
   border-radius: 4px;
   box-shadow: 0 4px 14px rgb(0 0 0 / 20%);
   overflow-wrap: anywhere;
+}
+/* The download notice, in the map's corner opposite the minimap. */
+#fetch-chip {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: min(22rem, calc(100% - 11rem));
+  padding: 0.5rem 0.65rem;
+  font-size: 13px;
+  background: color-mix(in oklab, var(--bg) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 20%);
+}
+#fetch-chip[hidden] {
+  display: none;
+}
+#fetch-chip button {
+  align-self: flex-start;
+}
+.chip-line {
+  overflow-wrap: anywhere;
+}
+.chip-bar {
+  height: 0.4rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.chip-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s linear;
+}
+@media (max-width: 30rem) {
+  #fetch-chip {
+    max-width: calc(100% - 7.5rem);
+  }
 }
 .tip-name {
   font-weight: 600;

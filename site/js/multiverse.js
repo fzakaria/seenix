@@ -36,10 +36,87 @@ function fetchShard(dir, attr) {
   return shardCache.get(key);
 }
 
+let namesPromise;
+
+// The autocomplete corpus: attribute -> how many versions it ever had.
+export function attrNames() {
+  namesPromise ??= fetch(`${MULTIVERSE_URL}/names.json`)
+    .then((res) => res.json())
+    .then((json) => json.attrs);
+  return namesPromise;
+}
+
+// Whether a version has an x86_64-linux store path to map.
+export const bootable = (version) => version.storePath !== null;
+
+// One meta-shard entry as a version record.
+function built(attr, version, entry) {
+  const name = entry.n ?? `${attr}-${version}`;
+  return {
+    attr,
+    version,
+    digest: entry.d,
+    name,
+    storePath: `/nix/store/${entry.d}-${name}`,
+    closureSize: entry.cs ?? 0,
+  };
+}
+
+// A version nixpkgs shipped that Hydra never built for this system.
+const unbuilt = (attr, version) => ({
+  attr,
+  version,
+  digest: null,
+  name: `${attr}-${version}`,
+  storePath: null,
+  closureSize: 0,
+});
+
+// Every version nixpkgs ever shipped of an attribute, newest first: the
+// ones with a store path for this system from the meta shard, and the
+// rest, from the versions shard, with none. Pure, so the join is testable
+// without the network.
+export function mergeVersions(attr, indexed, entries) {
+  const versions = new Set([
+    ...Object.keys(indexed ?? {}),
+    ...Object.keys(entries ?? {}),
+  ]);
+  return [...versions]
+    .map((version) =>
+      entries?.[version] === undefined
+        ? unbuilt(attr, version)
+        : built(attr, version, entries[version]),
+    )
+    .sort((a, b) => compareVersions(b.version, a.version));
+}
+
+// An attribute's version rows, both shards fetched at once.
+export async function versionRowsOf(attr) {
+  const [meta, all] = await Promise.all([
+    fetchShard(`meta-${SYSTEM}`, attr),
+    fetchShard("versions", attr),
+  ]);
+  return mergeVersions(attr, all.attrs?.[attr], meta.attrs?.[attr]);
+}
+
+// Attributes whose name contains the query, best matches first: exact,
+// then prefix, then substring, each alphabetically within its class.
+export async function searchAttrs(query, limit) {
+  const names = await attrNames();
+  const q = query.toLowerCase();
+  const rank = (name) => (name === q ? 0 : name.startsWith(q) ? 1 : 2);
+  return Object.keys(names)
+    .filter((name) => name.toLowerCase().includes(q))
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .slice(0, limit)
+    .map((name) => ({ attr: name, versionCount: names[name] }));
+}
+
 // Version ordering good enough to pick the newest: numeric runs compare
-// as numbers, everything else lexically, and a release sorts above its
-// own prereleases because the shorter run wins when every shared
-// component is equal.
+// as numbers, everything else lexically. When one version has components
+// left after every shared one is equal, a numeric one makes it a later
+// release (1.2 < 1.2.1) and anything else makes it a prerelease
+// (1.2-rc1 < 1.2).
 export function compareVersions(a, b) {
   const split = (v) => v.split(/[.\-_+]/).filter(Boolean);
   const pa = split(a);
@@ -48,11 +125,11 @@ export function compareVersions(a, b) {
   for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
     const x = pa[i];
     const y = pb[i];
-    if (x === undefined) {
-      return -1;
-    }
-    if (y === undefined) {
-      return 1;
+    if (x === undefined || y === undefined) {
+      const rest = x ?? y;
+      const later = /^\d/.test(rest);
+      const aIsShorter = x === undefined;
+      return aIsShorter === later ? -1 : 1;
     }
     const nx = Number(x);
     const ny = Number(y);
