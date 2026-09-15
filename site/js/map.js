@@ -7,7 +7,7 @@ import { Camera } from "./camera.js";
 import { Renderer } from "./render.js";
 import { NO_PATH } from "./tileformat.js";
 import { TileManager } from "./tiles.js";
-import { maxLod } from "./tilemath.js";
+import { contentBounds, maxLod } from "./tilemath.js";
 import { Mode } from "./url.js";
 
 // Hex digits are drawn once a byte is this many CSS pixels wide.
@@ -18,6 +18,10 @@ const HEX_MAX_CELLS = 8000;
 const DRAG_THRESHOLD_PX = 6;
 const DOUBLE_TAP_MS = 320;
 const WHEEL_ZOOM_PER_PIXEL = 1 / 360;
+
+// A trackpad pinch arrives as a wheel event with ctrlKey set and deltas of
+// a few pixels, so it zooms more per pixel than a scroll does.
+const PINCH_ZOOM_PER_PIXEL = 1 / 100;
 const WHEEL_LINE_PX = 16;
 const WHEEL_PAGE_PX = 400;
 const KEY_PAN_FRACTION = 0.2;
@@ -47,6 +51,7 @@ export class MapView {
     this.pathTable = null;
     this.pathTableRows = 1;
     this.pathTableDirty = false;
+    this.bounds = { x0: 0, y0: 0, x1: 1, y1: 1 };
     this.pending = false;
     this.pointers = new Map();
     this.gesture = null;
@@ -84,9 +89,10 @@ export class MapView {
     this.selected = NO_PATH;
     this.refLine = null;
     this.camera.worldSize = 2 ** model.order;
+    this.bounds = contentBounds(model.order, model.total);
     this.tiles.reset(generation, model.order, model.total);
     if (view === null) {
-      this.camera.fit();
+      this.camera.fit(this.bounds);
     } else {
       this.camera.set(view.cx, view.cy, view.zoom);
     }
@@ -132,8 +138,9 @@ export class MapView {
     this.requestFrame();
   }
 
+  // Frame the bytes of the closure, not the padding around them.
   fit() {
-    this.camera.fit();
+    this.camera.fit(this.bounds);
     this.requestFrame();
   }
 
@@ -437,11 +444,10 @@ export class MapView {
             : event.deltaMode === DOM_DELTA_PAGE
               ? WHEEL_PAGE_PX
               : 1;
-        this.camera.zoomAround(
-          at.x,
-          at.y,
-          -event.deltaY * unit * WHEEL_ZOOM_PER_PIXEL,
-        );
+        const perPixel = event.ctrlKey
+          ? PINCH_ZOOM_PER_PIXEL
+          : WHEEL_ZOOM_PER_PIXEL;
+        this.camera.zoomAround(at.x, at.y, -event.deltaY * unit * perPixel);
         this.requestFrame();
         this.scheduleHover(
           this.point(at.x, at.y, event.pointerType ?? "mouse"),
@@ -449,6 +455,22 @@ export class MapView {
       },
       { passive: false },
     );
+
+    // Safari reports a trackpad pinch as gesture events carrying the
+    // cumulative scale, rather than as ctrl-wheel events.
+    let gestureScale = 1;
+    canvas.addEventListener("gesturestart", (event) => {
+      event.preventDefault();
+      gestureScale = 1;
+    });
+    canvas.addEventListener("gesturechange", (event) => {
+      event.preventDefault();
+      const at = this.local(event);
+      this.camera.zoomAround(at.x, at.y, Math.log2(event.scale / gestureScale));
+      gestureScale = event.scale;
+      this.requestFrame();
+    });
+    canvas.addEventListener("gestureend", (event) => event.preventDefault());
 
     shell.addEventListener("keydown", (event) => this.key(event));
 
@@ -533,7 +555,7 @@ export class MapView {
     } else if (event.key === "-" || event.key === "_") {
       camera.zoomAround(cssWidth / 2, cssHeight / 2, -KEY_ZOOM_STEP);
     } else if (event.key === "0") {
-      camera.fit();
+      camera.fit(this.bounds);
     } else if (event.key === "f") {
       this.callbacks.onFlyToSelected?.();
     } else if (event.key === "Escape") {

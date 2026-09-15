@@ -106,6 +106,7 @@ const state = {
   tab: Tab.INSPECT,
   pending: { bytes: 0, jobs: [] },
   allArmed: false,
+  restored: -1,
 };
 
 const fetcher = new Fetcher({
@@ -479,6 +480,7 @@ async function restoreCached(generation) {
     }
   }
 
+  state.restored = generation;
   map?.invalidate(0, state.model.total);
   refreshPanels();
   scheduleFetching();
@@ -656,6 +658,12 @@ function visiblePaths() {
 
 function updateFetching() {
   if (state.model === null || map === null) {
+    return;
+  }
+
+  // Until the NARs already on disk are known, every path looks unfetched,
+  // and fetching now would download them again over the files being read.
+  if (state.restored !== state.generation) {
     return;
   }
   const { k, visible } = visiblePaths();
@@ -863,6 +871,27 @@ function readThroughWorker(name, kind, offset, length) {
     });
   });
 }
+// A NAR on disk that the tile worker could not read is evicted, which
+// clears its state and files, so the next view that needs it fetches it.
+tileWorker.addEventListener("message", ({ data }) => {
+  if (data.type !== "unreadable" || data.generation !== state.generation) {
+    return;
+  }
+  const hash = [...state.byHash.keys()].find(
+    (h) => fileNameOf(h) === data.name,
+  );
+  if (hash === undefined) {
+    return;
+  }
+  console.warn(
+    `seenix: ${data.name} is unreadable (${data.message}); fetching it again`,
+  );
+  fetcher.evict(hash);
+  setBits(state.byHash.get(hash), 0, PathState.RAW);
+  invalidatePaths(state.byHash.get(hash));
+  scheduleFetching();
+});
+
 tileWorker.addEventListener("message", ({ data }) => {
   if (data.type !== "read") {
     return;
@@ -1093,6 +1122,7 @@ for (const link of document.querySelectorAll("#panel-tabs a")) {
 // What each mode's colours mean: a title for the button and the dots
 // under the toolbar.
 const HATCH = { hatch: true, label: "hatched: not fetched yet" };
+const PADDING = { padding: true, label: "background: past the last byte" };
 const MODE_HELP = {
   [Mode.BYTES]: {
     title:
@@ -1104,6 +1134,7 @@ const MODE_HELP = {
       { color: "#eb5933", label: "high bytes" },
       { color: "#ffffff", label: "0xff" },
       HATCH,
+      PADDING,
     ],
   },
   [Mode.CLASSES]: {
@@ -1114,6 +1145,7 @@ const MODE_HELP = {
       { color: "#4080f2", label: "ASCII" },
       { color: "#eb5933", label: "high" },
       HATCH,
+      PADDING,
     ],
   },
   [Mode.ENTROPY]: {
@@ -1125,11 +1157,12 @@ const MODE_HELP = {
       { color: "#f78c24", label: "high" },
       { color: "#fdf399", label: "compressed or random" },
       HATCH,
+      PADDING,
     ],
   },
   [Mode.PACKAGE]: {
     title: "one hue per package, brighter where fetched bytes are dense",
-    dots: [{ color: "#7a8fd6", label: "one hue per package" }, HATCH],
+    dots: [{ color: "#7a8fd6", label: "one hue per package" }, HATCH, PADDING],
   },
 };
 
@@ -1150,7 +1183,9 @@ function renderModes() {
           "i",
           dot.hatch
             ? { class: "hatch" }
-            : { style: `background: ${dot.color}` },
+            : dot.padding
+              ? { class: "padding" }
+              : { style: `background: ${dot.color}` },
         ),
         dot.label,
       ),

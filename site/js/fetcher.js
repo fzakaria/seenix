@@ -68,6 +68,9 @@ export class Fetcher {
   // An explicit job survives scrolling away.
   request(jobs, explicit) {
     for (const spec of jobs) {
+      if (this.stored.has(spec.narHash)) {
+        continue;
+      }
       const existing = this.jobs.get(spec.narHash);
       if (existing !== undefined) {
         existing.priority = Math.min(existing.priority, spec.priority);

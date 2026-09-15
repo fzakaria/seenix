@@ -146,11 +146,13 @@ export function opfsDirs() {
   return dirsPromise;
 }
 
-// File snapshots by directory and name. A snapshot of a file that has
-// since been removed or rewritten fails to read, and is dropped then.
+// File snapshots by directory and name. A snapshot taken while a file was
+// being written describes the file as it was then, so a read that comes
+// back shorter than asked drops the snapshot and reads once more from a
+// fresh one, and forgetFile() drops a file's snapshots when it changes.
 const files = new Map();
 
-export async function readSlice(dir, name, offset, length) {
+function snapshot(dir, name) {
   const key = `${dir.name}/${name}`;
   if (!files.has(key)) {
     files.set(
@@ -158,14 +160,39 @@ export async function readSlice(dir, name, offset, length) {
       dir.getFileHandle(name).then((handle) => handle.getFile()),
     );
   }
+  return files.get(key);
+}
+
+async function sliceOf(dir, name, offset, length) {
+  const file = await snapshot(dir, name);
+  const blob = file.slice(offset, offset + length);
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+export async function readSlice(dir, name, offset, length) {
+  const key = `${dir.name}/${name}`;
   try {
-    const file = await files.get(key);
-    const blob = file.slice(offset, offset + length);
-    return new Uint8Array(await blob.arrayBuffer());
+    const bytes = await sliceOf(dir, name, offset, length);
+    if (bytes.length === length) {
+      return bytes;
+    }
+    files.delete(key);
+    const fresh = await sliceOf(dir, name, offset, length);
+    if (fresh.length !== length) {
+      throw new Error(
+        `${key}: ${fresh.length} bytes where ${length} were expected`,
+      );
+    }
+    return fresh;
   } catch (err) {
     files.delete(key);
     throw err;
   }
+}
+
+export function forgetFile(name) {
+  files.delete(`${RAW_DIR}/${name}`);
+  files.delete(`${FINE_DIR}/${name}`);
 }
 
 // Delete a NAR's raw bytes and fine summaries.
@@ -175,8 +202,7 @@ export async function removeNarFiles(narHash) {
     return;
   }
   const name = fileNameOf(narHash);
-  files.delete(`${RAW_DIR}/${name}`);
-  files.delete(`${FINE_DIR}/${name}`);
+  forgetFile(name);
   await dirs.raw.removeEntry(name).catch(() => {});
   await dirs.fine.removeEntry(name).catch(() => {});
 }

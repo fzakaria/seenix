@@ -15,6 +15,7 @@
 // Messages out:
 //   { type: "tile", generation, key, k, tx, ty, data, ids }
 //   { type: "read", requestId, bytes, error }
+//   { type: "unreadable", generation, name, message }
 
 import {
   COARSE_CHUNK,
@@ -27,7 +28,7 @@ import {
 } from "../config.js";
 import { xy2d } from "../hilbert.js";
 import { pathAt } from "../layout.js";
-import { opfsDirs, readSlice } from "../storage.js";
+import { forgetFile, opfsDirs, readSlice } from "../storage.js";
 import { ByteClass, CLASS_OF, Field } from "../summary.js";
 import { HAS_BYTES, NO_PATH } from "../tileformat.js";
 
@@ -83,9 +84,14 @@ const handlers = {
     }
   },
 
+  // The files behind these paths were written or removed, so any snapshot
+  // of them is out of date.
   raw({ ids, available }) {
     for (const id of ids) {
       rawAvailable[id] = available ? 1 : 0;
+      if (names[id] !== null) {
+        forgetFile(names[id]);
+      }
     }
   },
 
@@ -176,8 +182,19 @@ async function gatherSources(start, end, withRaw) {
             bytes.set(nar.subarray(0, lb - la), pathStart + la - start);
           }
           fine.set(id, { first: r0, records });
-        } catch {
-          // Evicted since, or unreadable: the texels stay empty.
+        } catch (err) {
+          // A path marked on disk whose files cannot be read is reported,
+          // so the page can forget it and fetch it again. A path evicted
+          // in the meantime is no longer marked, and says nothing.
+          if (rawAvailable[id] === 1) {
+            rawAvailable[id] = 0;
+            self.postMessage({
+              type: "unreadable",
+              generation,
+              name: names[id],
+              message: err.message,
+            });
+          }
         }
       })(),
     );

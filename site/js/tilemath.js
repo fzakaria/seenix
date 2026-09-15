@@ -3,7 +3,7 @@
 // range of the curve, found by xy2d at the reduced order.
 
 import { TILE_ORDER, TILE_SIZE } from "./config.js";
-import { xy2d } from "./hilbert.js";
+import { d2xy, xy2d } from "./hilbert.js";
 
 export const tileKey = (k, tx, ty) => `${k}/${tx}/${ty}`;
 
@@ -65,3 +65,28 @@ export function ancestorOf(k, tx, ty, levels) {
 }
 
 export const overlaps = (a0, a1, b0, b1) => a0 < b1 && b0 < a1;
+
+// The bounding box, in world pixels, of the bytes [0, total). The range
+// splits into aligned blocks, at most three per level from the largest
+// down, and each block's position is d2xy of its index at the reduced
+// order. Everything outside the box is padding.
+export function contentBounds(order, total) {
+  if (total <= 0) {
+    return { x0: 0, y0: 0, x1: 1, y1: 1 };
+  }
+  const bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  let d = 0;
+  for (let m = order; m >= 0 && d < total; m -= 1) {
+    const span = 4 ** m;
+    const side = 2 ** m;
+    while (d + span <= total) {
+      const [bx, by] = d2xy(order - m, d / span);
+      bounds.x0 = Math.min(bounds.x0, bx * side);
+      bounds.y0 = Math.min(bounds.y0, by * side);
+      bounds.x1 = Math.max(bounds.x1, (bx + 1) * side);
+      bounds.y1 = Math.max(bounds.y1, (by + 1) * side);
+      d += span;
+    }
+  }
+  return bounds;
+}

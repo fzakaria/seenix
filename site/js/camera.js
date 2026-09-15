@@ -8,7 +8,7 @@ export const MAX_ZOOM = 6;
 // How far past "whole world fits" the view may zoom out.
 const ZOOM_OUT_MARGIN = 2;
 
-// The share of the shorter viewport side the world fills when fit.
+// The share of the viewport the fitted rectangle fills.
 const FIT_FILL = 0.94;
 
 const FLY_MS = 650;
@@ -47,10 +47,15 @@ export class Camera {
     return Math.min(MAX_ZOOM, Math.max(this.fitZoom() - ZOOM_OUT_MARGIN, zoom));
   }
 
-  fit() {
-    this.cx = this.worldSize / 2;
-    this.cy = this.worldSize / 2;
-    this.zoom = this.fitZoom();
+  // Centre and zoom on a world rectangle, the whole world by default.
+  fit(bounds = { x0: 0, y0: 0, x1: this.worldSize, y1: this.worldSize }) {
+    const width = Math.max(1, bounds.x1 - bounds.x0);
+    const height = Math.max(1, bounds.y1 - bounds.y0);
+    this.cx = (bounds.x0 + bounds.x1) / 2;
+    this.cy = (bounds.y0 + bounds.y1) / 2;
+    this.zoom = this.clampZoom(
+      Math.log2(Math.min(this.width / width, this.height / height) * FIT_FILL),
+    );
     this.flight = null;
   }
 
