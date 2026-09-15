@@ -1,0 +1,574 @@
+/* System fonts, one accent, dark mode via media query. The tokens and the
+   site chrome match nixpkgs-multiverse and trynix, so the sites read as
+   one family. */
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6a6a6a;
+  --line: #e0e0e0;
+  --accent: #4f6bed;
+  --code-bg: #f4f4f4;
+  --error: #c94f4f;
+  --map-bg: #e9e9e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --fg: #e6e6e6;
+    --muted: #9a9a9a;
+    --line: #33363d;
+    --accent: #8fa3ff;
+    --code-bg: #22252c;
+    --error: #e07070;
+    --map-bg: #0d0e11;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0 auto;
+  padding: 1rem;
+  max-width: 88rem;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+}
+h1 {
+  font-size: 1.3rem;
+  margin: 0.2rem 0;
+}
+h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The site header: the title on the left, the top-level destinations on
+   the right. Wraps to two lines on a narrow phone rather than shrinking. */
+header.site {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  margin: 0.2rem 0 0.6rem;
+}
+nav.site {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  font-size: 14px;
+}
+nav.site a {
+  color: var(--accent);
+  text-decoration: none;
+}
+nav.site a:hover {
+  text-decoration: underline;
+}
+h2 {
+  font-size: 1.1rem;
+  margin: 0.4rem 0 0.2rem;
+}
+h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 1rem 0 0.3rem;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: var(--error);
+}
+a {
+  color: var(--accent);
+}
+.lede {
+  font-weight: 600;
+}
+.claim {
+  text-decoration: underline var(--muted);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+code,
+kbd {
+  font:
+    13px/1.5 ui-monospace,
+    monospace;
+  background: var(--code-bg);
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+}
+
+/* The prose above and below the map keeps a readable measure. */
+.intro,
+.examples,
+#source,
+#help {
+  max-width: 60rem;
+}
+.examples a {
+  white-space: nowrap;
+}
+
+/* The source lanes, the same tabs as trynix's. */
+#lanes,
+#panel-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+#lanes {
+  margin: 0.8rem 0;
+}
+#lanes a,
+#panel-tabs a {
+  flex: 0 0 auto;
+  border-bottom: 2px solid transparent;
+  padding: 0.4rem 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+#lanes a.active,
+#panel-tabs a.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: var(--fg);
+}
+button {
+  padding: 0.35rem 0.8rem;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover {
+  border-color: var(--accent);
+}
+button.armed {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.row-form {
+  display: flex;
+  gap: 0.5rem;
+}
+.row-form input,
+#caches-input,
+#search {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  font:
+    13px/1.5 ui-monospace,
+    monospace;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+#caches-input {
+  width: 100%;
+  resize: vertical;
+}
+#status {
+  margin: 0.5rem 0;
+  min-height: 1.5em;
+}
+
+/* The toolbar: modes, search, and actions, wrapping on narrow screens. */
+#toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+#modes {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+#modes button {
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+}
+#modes button:last-child {
+  border-right: 0;
+}
+#modes button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--bg);
+}
+.search-wrap {
+  position: relative;
+  flex: 1 1 12rem;
+  display: flex;
+}
+#search-results {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 15%);
+}
+#search-results li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.6rem;
+  font:
+    13px ui-monospace,
+    monospace;
+  cursor: pointer;
+}
+#search-results li:hover {
+  background: var(--code-bg);
+}
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The map beside its panel; stacked below 60rem. */
+#map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 23rem;
+  gap: 1rem;
+}
+#map-shell {
+  position: relative;
+  height: min(78vh, 54rem);
+  min-height: 22rem;
+  background: var(--map-bg);
+  border-radius: 6px;
+  overflow: hidden;
+  touch-action: none;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#map-shell:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+#map,
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+#map {
+  cursor: crosshair;
+}
+#overlay {
+  pointer-events: none;
+}
+#minimap {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  width: 8.5rem;
+  height: 8.5rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 4px;
+  cursor: pointer;
+  touch-action: none;
+}
+#tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  max-width: 28rem;
+  padding: 0.4rem 0.55rem;
+  pointer-events: none;
+  font:
+    12px/1.45 ui-monospace,
+    monospace;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 20%);
+  overflow-wrap: anywhere;
+}
+.tip-name {
+  font-weight: 600;
+}
+.tip-ref {
+  color: var(--accent);
+}
+#empty,
+#drop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  background: var(--map-bg);
+}
+#empty[hidden],
+#drop-hint[hidden] {
+  display: none;
+}
+#empty ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1rem;
+}
+#drop-hint {
+  z-index: 30;
+  background: color-mix(in oklab, var(--map-bg) 85%, transparent);
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+}
+
+/* The panel: inspect and statistics. */
+#panel {
+  max-height: min(78vh, 54rem);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 0.8rem 0.8rem;
+  font-size: 14px;
+}
+#panel-tabs {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  margin: 0 -0.8rem 0.4rem;
+  padding: 0 0.4rem;
+}
+.path-name {
+  overflow-wrap: anywhere;
+}
+.store-path code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.15rem 0.8rem;
+  margin: 0.4rem 0;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.facts code {
+  font-size: 11px;
+  padding: 0;
+  background: none;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.plain {
+  list-style: none;
+  padding: 0;
+  margin: 0.3rem 0;
+}
+.path-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font:
+    13px ui-monospace,
+    monospace;
+}
+.path-link:hover {
+  text-decoration: underline;
+}
+button.copy {
+  padding: 0 0.4rem;
+  font-size: 12px;
+}
+.crumbs {
+  margin: 0.3rem 0;
+  padding-left: 1.4rem;
+}
+.command {
+  margin: 0.4rem 0 0.2rem;
+  padding: 0.5rem;
+  background: var(--code-bg);
+  border-radius: 4px;
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.refs summary {
+  cursor: pointer;
+  margin: 0.4rem 0 0.2rem;
+}
+.files code {
+  font-size: 12px;
+  background: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+.ranked {
+  margin: 0.3rem 0;
+  padding-left: 1.4rem;
+}
+.ranked li,
+.legend li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.value {
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stat-bar .bar {
+  display: flex;
+  height: 0.7rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0;
+  font-size: 13px;
+}
+.legend i {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.35rem;
+  border-radius: 2px;
+}
+.legend .label {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+#session {
+  font-size: 13px;
+}
+
+#help {
+  margin: 1.2rem 0;
+}
+#help summary {
+  cursor: pointer;
+}
+
+footer {
+  margin-top: 2rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  text-align: center;
+}
+/* A store path is a single token; keep it on one line and shrink it. */
+#store {
+  margin-top: 0.3rem;
+}
+#store code {
+  font-size: min(12px, 2.1vw);
+  white-space: nowrap;
+  background: none;
+  padding: 0;
+}
+
+@media (max-width: 60rem) {
+  #map-layout {
+    grid-template-columns: 1fr;
+  }
+  #map-shell {
+    height: 68svh;
+  }
+  #panel {
+    max-height: none;
+  }
+}
+
+/* Touch: larger targets, the minimap smaller, and the tooltip pinned to
+   the top of the map rather than under a finger. */
+@media (pointer: coarse) {
+  button {
+    min-height: 2.5rem;
+  }
+  #modes button {
+    padding: 0.35rem 0.7rem;
+  }
+  #minimap {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+  #tooltip {
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    max-width: none;
+    transform: none !important;
+  }
+  .path-link {
+    padding: 0.2rem 0;
+  }
+}
+@media (max-width: 30rem) {
+  body {
+    padding: 0.6rem;
+  }
+  #toolbar {
+    gap: 0.4rem;
+  }
+  #modes {
+    width: 100%;
+  }
+  #modes button {
+    flex: 1;
+  }
+  .toolbar-actions {
+    width: 100%;
+  }
+  .toolbar-actions button {
+    flex: 1;
+  }
+}

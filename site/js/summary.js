@@ -21,7 +21,7 @@ const BITS_PER_BYTE = 8;
 const BYTE_VALUES = 256;
 
 // Every byte value's class.
-const ByteClass = Object.freeze({ ZERO: 0, ASCII: 1, HIGH: 2, CONTROL: 3 });
+export const ByteClass = Object.freeze({ ZERO: 0, ASCII: 1, HIGH: 2, CONTROL: 3 });
 const CLASS_COUNT = 4;
 const TAB = 0x09;
 const NEWLINE = 0x0a;
@@ -30,7 +30,7 @@ const PRINTABLE_FIRST = 0x20;
 const PRINTABLE_LAST = 0x7e;
 const HIGH_FIRST = 0x80;
 
-const CLASS_OF = new Uint8Array(BYTE_VALUES).map((_, b) => {
+export const CLASS_OF = new Uint8Array(BYTE_VALUES).map((_, b) => {
   if (b === 0) {
     return ByteClass.ZERO;
   }

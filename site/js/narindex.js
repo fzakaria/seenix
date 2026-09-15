@@ -275,9 +275,10 @@ export function buildFileLookup(entries) {
   };
 }
 
-// The index of the entry whose contents hold `offset`, or -1 when the
-// byte is NAR framing (tokens, names, padding).
-export function fileAt(lookup, offset) {
+// The file ordinal (position in the lookup, plus one) whose contents hold
+// `offset`, or 0 when the byte is NAR framing (tokens, names, padding).
+// The ordinal is what a tile's ids texture carries.
+export function ordinalAt(lookup, offset) {
   const { starts, ids, entries } = lookup;
   let lo = 0;
   let hi = starts.length;
@@ -290,9 +291,14 @@ export function fileAt(lookup, offset) {
     }
   }
   if (lo === 0) {
-    return -1;
+    return 0;
   }
-  const id = ids[lo - 1];
-  const entry = entries[id];
-  return offset < entry.contentOffset + entry.size ? id : -1;
+  const entry = entries[ids[lo - 1]];
+  return offset < entry.contentOffset + entry.size ? lo : 0;
+}
+
+// The index of the entry whose contents hold `offset`, or -1 in framing.
+export function fileAt(lookup, offset) {
+  const ordinal = ordinalAt(lookup, offset);
+  return ordinal === 0 ? -1 : lookup.ids[ordinal - 1];
 }
