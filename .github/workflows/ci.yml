@@ -1,5 +1,7 @@
 # Formatting first, then `nix flake check`, which runs everything the
-# flake defines, all of it offline:
+# flake defines, all of it offline. Everything the job builds is pushed to
+# seenix.cachix.org, so the example closure the landing page links is
+# always there and later jobs substitute rather than rebuild.
 #
 #   checks.tests — the node test suite: the Hilbert curve, layout, graph
 #                  analysis, path-info import, the streaming NAR indexer
@@ -30,7 +32,7 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - uses: cachix/cachix-action@v15
+      - uses: cachix/cachix-action@v17
         with:
           name: seenix
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}

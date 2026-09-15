@@ -40,6 +40,14 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      # The site and its vendored decoders come out of the cache the ci
+      # job fills, and whatever this job builds goes back into it.
+      - uses: cachix/cachix-action@v17
+        with:
+          name: seenix
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build the site
         # The store output is read-only and symlinked; the pages artifact

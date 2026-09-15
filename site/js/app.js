@@ -1262,10 +1262,10 @@ const MODE_HELP = {
   },
   [Mode.ENTROPY]: {
     title:
-      "Shannon entropy per 256 bytes: compressed data bright, text and padding dark",
+      "Shannon entropy per 256 bytes: compressed data bright, code and text in the middle, zeros dark",
     dots: [
-      { color: "#0a0829", label: "low: padding, text" },
-      { color: "#bd3861", label: "middling: code" },
+      { color: "#0a0829", label: "low: zeros, repetition" },
+      { color: "#bd3861", label: "middling: code, text" },
       { color: "#f78c24", label: "high" },
       { color: "#fdf399", label: "compressed or random" },
       HATCH,
