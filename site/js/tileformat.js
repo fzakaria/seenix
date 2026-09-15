@@ -7,13 +7,17 @@
 //                   A = entropy (the summary record layout, summary.js)
 //   ids   RG32UI, 256x256
 //         R = path id at the texel's middle byte, NO_PATH for padding
-//         G = file ordinal in that path's NAR (0 for framing or unknown),
-//             with HAS_BYTES set when the texel's data was built from
-//             bytes rather than left empty
+//         G = bits 0-23: file ordinal in that path's NAR (0 for framing
+//             or unknown); bits 24-27: the section kind of the middle
+//             byte (sections.js); bit 30, HAS_SECTIONS: the path's section
+//             table is known; bit 31, HAS_BYTES: the texel's data was
+//             built from bytes rather than left empty
 
 export const NO_PATH = 0xffffffff;
 export const HAS_BYTES = 0x80000000;
-export const FILE_MASK = 0x7fffffff;
+export const HAS_SECTIONS = 0x40000000;
+export const FILE_MASK = 0x00ffffff;
+export const KIND_SHIFT = 24;
 
 // The path table: one RGBA8 texel per path, RGB its package colour and A
 // its state bits, wrapped at this width.

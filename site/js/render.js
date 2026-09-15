@@ -13,7 +13,7 @@ import { Mode } from "./url.js";
 
 export const MODE_CODES = Object.freeze({
   [Mode.BYTES]: 0,
-  [Mode.CLASSES]: 1,
+  [Mode.SECTIONS]: 1,
   [Mode.ENTROPY]: 2,
   [Mode.PACKAGE]: 3,
 });
@@ -52,10 +52,14 @@ out vec4 outColor;
 
 const uint NO_PATH = 0xffffffffu;
 const uint HAS_BYTES = 0x80000000u;
-const uint FILE_MASK = 0x7fffffffu;
+const uint HAS_SECTIONS = 0x40000000u;
+const uint FILE_MASK = 0x00ffffffu;
+const uint KIND_SHIFT = 24u;
+const uint KIND_MASK = 15u;
 const uint TABLE_WIDTH = ${PATH_TABLE_WIDTH}u;
 
 const int MODE_BYTES = 0;
+const int MODE_SECTIONS = 1;
 const int MODE_ENTROPY = 2;
 const int MODE_PACKAGE = 3;
 
@@ -82,11 +86,17 @@ vec3 entropyRamp(float t) {
   return mix(c3, c4, x - 3.0);
 }
 
-vec3 classColor(uint b) {
-  if (b == 0u) return ZERO_COLOR;
-  if (b >= 128u) return HIGH_COLOR;
-  if ((b >= 32u && b <= 126u) || b == 9u || b == 10u || b == 13u) return ASCII_COLOR;
-  return CONTROL_COLOR;
+// A colour per section kind (sections.js), and two greys for bytes in no
+// section: the contents of a file that is not ELF, and NAR framing.
+vec3 sectionColor(uint kind, bool inFile) {
+  if (kind == 1u) return vec3(0.89, 0.33, 0.24);
+  if (kind == 2u) return vec3(0.25, 0.52, 0.93);
+  if (kind == 3u) return vec3(0.22, 0.70, 0.40);
+  if (kind == 4u) return vec3(0.93, 0.72, 0.20);
+  if (kind == 5u) return vec3(0.60, 0.38, 0.80);
+  if (kind == 6u) return vec3(0.40, 0.75, 0.80);
+  if (kind == 7u) return vec3(0.55, 0.50, 0.45);
+  return inFile ? vec3(0.42) : vec3(0.22);
 }
 
 // 1.0 on the stripes of a diagonal hatch measured in CSS pixels, so the
@@ -125,7 +135,9 @@ void main() {
   vec4 d = texelFetch(u_data, t, 0);
 
   vec3 color;
-  if (!hasBytes) {
+  if (u_mode == MODE_SECTIONS && (here.g & HAS_SECTIONS) != 0u) {
+    color = sectionColor((here.g >> KIND_SHIFT) & KIND_MASK, file != 0u);
+  } else if (!hasBytes) {
     // No bytes yet: the package colour, muted and hatched by state.
     float gray = dot(pkg, vec3(0.299, 0.587, 0.114));
     vec3 muted = u_mode == MODE_PACKAGE ? pkg : mix(vec3(gray), pkg, 0.45);
@@ -142,11 +154,12 @@ void main() {
     color = pkg * (0.65 + 0.5 * d.a);
   } else if (u_mode == MODE_ENTROPY) {
     color = entropyRamp(d.a);
+  } else if (u_mode == MODE_SECTIONS) {
+    // Bytes whose section table has not been read yet: muted, not hatched.
+    color = mix(vec3(dot(pkg, vec3(0.299, 0.587, 0.114))), pkg, 0.35) * 0.8;
   } else if (u_lod == 0) {
     uint b = uint(d.r * 255.0 + 0.5);
-    color = u_mode == MODE_BYTES
-      ? texelFetch(u_palette, ivec2(int(b), 0), 0).rgb
-      : classColor(b);
+    color = texelFetch(u_palette, ivec2(int(b), 0), 0).rgb;
   } else {
     float control = max(0.0, 1.0 - d.r - d.g - d.b);
     color = d.r * ZERO_COLOR + d.g * ASCII_COLOR + d.b * HIGH_COLOR + control * CONTROL_COLOR;

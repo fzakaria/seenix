@@ -5,7 +5,7 @@
 //   &pkg=attr@version                    a root from the multiverse index
 //   &json=https://.../closure.json       nix path-info -r --json, by URL
 //   &cache=https://x.cachix.org x-1:key= an extra binary cache; repeatable
-//   &mode=bytes|classes|entropy|package  the colour mode
+//   &mode=bytes|sections|entropy|package the colour mode
 //   &sel=<digest>                        the path pinned in the legend
 //   &view=<cx>,<cy>,<zoom>               world centre and log2 zoom
 //
@@ -29,11 +29,14 @@ const VIEW_FIELDS = 3;
 // what the shader's `mode` uniform receives.
 export const Mode = Object.freeze({
   BYTES: "bytes",
-  CLASSES: "classes",
+  SECTIONS: "sections",
   ENTROPY: "entropy",
   PACKAGE: "package",
 });
 export const MODES = Object.values(Mode);
+
+// Modes that links may still name, and what they open as now.
+const RETIRED_MODES = Object.freeze({ classes: Mode.BYTES });
 
 // { paths, pkgs: [{attr, version|null}], json, caches: [{url, key}],
 //   mode, sel, view: {cx, cy, zoom} | null }
@@ -63,9 +66,10 @@ export function readUrl(search = location.search) {
     .filter((parts) => parts.length === 2)
     .map(([url, key]) => ({ url: url.replace(/\/$/, ""), key }));
 
-  const mode = MODES.includes(params.get(PARAM_MODE))
-    ? params.get(PARAM_MODE)
-    : null;
+  const requested = params.get(PARAM_MODE);
+  const mode = MODES.includes(requested)
+    ? requested
+    : (RETIRED_MODES[requested] ?? null);
 
   const sel = DIGEST_PATTERN.test(params.get(PARAM_SEL) ?? "")
     ? params.get(PARAM_SEL)

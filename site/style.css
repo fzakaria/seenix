@@ -312,6 +312,53 @@ button.armed {
   cursor: help;
 }
 
+/* The selection: chips for what the Map button will map, and the button
+   on its own row under them. */
+#selection-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+#selection-row:has(#map-selection[hidden]) {
+  margin: 0;
+}
+#selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+#selection .chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.2rem 0.6rem;
+  font:
+    13px ui-monospace,
+    monospace;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+}
+#selection .chip .out {
+  text-decoration-color: var(--bg);
+}
+#selection .chip .out:hover {
+  color: var(--bg);
+}
+#selection .drop {
+  min-height: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: none;
+}
+#map-selection:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* The toolbar: modes, search, and actions, wrapping on narrow screens. */
 #toolbar {
   display: flex;

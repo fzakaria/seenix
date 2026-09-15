@@ -41,3 +41,10 @@ test("malformed values are dropped", () => {
   assert.equal(back.view, null);
   assert.deepEqual(back.caches, []);
 });
+
+// Tests that a link from before the classes mode was folded into bytes
+// still opens, in bytes.
+test("a retired mode opens as the mode that replaced it", () => {
+  assert.equal(readUrl("?mode=classes").mode, Mode.BYTES);
+  assert.equal(readUrl("?mode=sections").mode, Mode.SECTIONS);
+});

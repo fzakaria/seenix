@@ -6,6 +6,7 @@
 //   { type: "layout", order, total, offsets, names }
 //   { type: "coarse", ids, records }
 //   { type: "files", ids, starts, ends }
+//   { type: "sections", ids, starts, ends, kinds }
 //   { type: "raw", ids, available }
 //   { type: "memory", name, raw, fine }
 //   { type: "forget", name }
@@ -30,7 +31,8 @@ import { xy2d } from "../hilbert.js";
 import { pathAt } from "../layout.js";
 import { forgetFile, opfsDirs, readSlice } from "../storage.js";
 import { ByteClass, CLASS_OF, Field } from "../summary.js";
-import { HAS_BYTES, NO_PATH } from "../tileformat.js";
+import { kindAt } from "../sections.js";
+import { HAS_BYTES, HAS_SECTIONS, KIND_SHIFT, NO_PATH } from "../tileformat.js";
 
 const TEXELS = TILE_SIZE * TILE_SIZE;
 const MAX = 255;
@@ -47,6 +49,7 @@ let names = [];
 let rawAvailable = new Uint8Array(0);
 let prefix = [];
 let files = [];
+let sections = [];
 const memory = new Map();
 
 const handlers = {
@@ -60,6 +63,7 @@ const handlers = {
     rawAvailable = new Uint8Array(count);
     prefix = new Array(count);
     files = new Array(count);
+    sections = new Array(count);
     memory.clear();
   },
 
@@ -81,6 +85,12 @@ const handlers = {
   files({ ids, starts, ends }) {
     for (const id of ids) {
       files[id] = { starts, ends };
+    }
+  },
+
+  sections({ ids, starts, ends, kinds }) {
+    for (const id of ids) {
+      sections[id] = { starts, ends, kinds };
     }
   },
 
@@ -368,8 +378,18 @@ async function build({ generation: requested, key, k, tx, ty }) {
         present = fromRaw(sources, a, b, k, id, data, 4 * i);
       }
 
-      const ordinal = fileOrdinal(id, mid - offsets[id]);
-      ids[2 * i + 1] = present ? (ordinal | HAS_BYTES) >>> 0 : ordinal;
+      // The file ordinal, the middle byte's section kind once the path's
+      // section table is known, and whether the texel's data is real.
+      const local = mid - offsets[id];
+      let flags = fileOrdinal(id, local);
+      const table = sections[id];
+      if (table !== undefined) {
+        flags |= HAS_SECTIONS | (kindAt(table, local) << KIND_SHIFT);
+      }
+      if (present) {
+        flags |= HAS_BYTES;
+      }
+      ids[2 * i + 1] = flags >>> 0;
     }
   }
 

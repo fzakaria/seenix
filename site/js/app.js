@@ -30,6 +30,7 @@ import {
   renderStats,
 } from "./panel.js";
 import { refAt } from "./refscan.js";
+import { buildSectionTable } from "./sections.js";
 import { closureFromJson, closureFromPaths } from "./source.js";
 import {
   Store,
@@ -107,6 +108,8 @@ const state = {
   indexes: new Map(),
   lookups: new Map(),
   refs: new Map(),
+  sections: new Map(),
+  selection: [],
   verified: [],
   analysis: null,
   selected: -1,
@@ -231,6 +234,10 @@ const scheduleUrl = throttle(() => {
 
 function applyUrl(url) {
   state.source = { paths: url.paths, pkgs: url.pkgs, json: url.json };
+  state.selection = [
+    ...url.pkgs.map((p) => ({ kind: Selected.PACKAGE, ...p })),
+    ...url.paths.map((path) => ({ kind: Selected.PATH, path })),
+  ];
   state.jsonText = null;
   state.caches = url.caches;
   state.mode = url.mode ?? DEFAULT_MODE;
@@ -239,10 +246,7 @@ function applyUrl(url) {
   $("caches-input").value = url.caches
     .map((c) => `${c.url} ${c.key}`)
     .join("\n");
-  $("store-path").value = url.paths.join(" ");
-  $("pkg-input").value = url.pkgs
-    .map((p) => (p.version ? `${p.attr}@${p.version}` : p.attr))
-    .join(" ");
+  renderSelection();
   $("json-url").value = url.json ?? "";
   renderModes();
   map?.setMode(state.mode);
@@ -355,6 +359,7 @@ function install(model) {
   state.indexes.clear();
   state.lookups.clear();
   state.refs.clear();
+  state.sections.clear();
   state.verified = new Array(n);
   state.analysis = null;
   elfCache.clear();
@@ -452,9 +457,9 @@ async function verifyAll(generation) {
 // still on disk.
 async function restoreCached(generation) {
   const hashes = [...state.byHash.keys()];
-  const [summaries, indexes, refs, raws] = await Promise.all(
-    [Store.SUMMARIES, Store.INDEXES, Store.REFS, Store.RAW].map((store) =>
-      getMany(store, hashes),
+  const [summaries, indexes, refs, raws, sectionTables] = await Promise.all(
+    [Store.SUMMARIES, Store.INDEXES, Store.REFS, Store.RAW, Store.SECTIONS].map(
+      (store) => getMany(store, hashes),
     ),
   );
   if (generation !== state.generation) {
@@ -486,6 +491,11 @@ async function restoreCached(generation) {
       setBits(ids, PathState.RAW, 0);
       tileWorker.postMessage({ type: "raw", generation, ids, available: true });
       fetcher.remember(hash, record.bytes, record.lastUsed);
+    }
+    if (sectionTables.has(hash)) {
+      applySectionTable(hash, sectionTables.get(hash));
+    } else {
+      ensureSections(hash, generation);
     }
   }
 
@@ -539,6 +549,53 @@ function applyIndex(hash, index) {
     starts: lookup.starts,
     ends,
   });
+}
+
+// Section tables, by NAR hash, for the sections colour mode. A table is
+// built from the NAR on disk the first time a path has both its file
+// index and its raw bytes, then kept in IndexedDB like the index.
+const sectionsPending = new Set();
+
+function applySectionTable(hash, table) {
+  state.sections.set(hash, table);
+  tileWorker.postMessage({
+    type: "sections",
+    generation: state.generation,
+    ids: state.byHash.get(hash),
+    starts: table.starts,
+    ends: table.ends,
+    kinds: table.kinds,
+  });
+}
+
+async function ensureSections(hash, generation) {
+  const ids = state.byHash.get(hash);
+  const index = state.indexes.get(hash);
+  const ready =
+    ids !== undefined &&
+    index !== undefined &&
+    (state.bits[ids[0]] & PathState.RAW) !== 0;
+  if (!ready || state.sections.has(hash) || sectionsPending.has(hash)) {
+    return;
+  }
+
+  sectionsPending.add(hash);
+  try {
+    const path = state.model.paths[ids[0]];
+    const table = await buildSectionTable(index.entries, (offset, length) =>
+      readNar(path, offset, length),
+    );
+    if (generation !== state.generation) {
+      return;
+    }
+    applySectionTable(hash, table);
+    put(Store.SECTIONS, hash, table);
+    invalidatePaths(ids);
+  } catch {
+    // Unreadable now; the next load tries again.
+  } finally {
+    sectionsPending.delete(hash);
+  }
 }
 
 // ---------- fetching ----------
@@ -621,6 +678,8 @@ function finishFetch(hash, ids, data) {
   }
   setBits(ids, data.rawStored !== null ? PathState.RAW : 0, PathState.LOADING);
   invalidatePaths(ids);
+
+  ensureSections(hash, state.generation);
 
   // Persist what is small and permanent, and the record of what is on
   // disk.
@@ -1238,7 +1297,7 @@ const PADDING = { padding: true, label: "background: past the last byte" };
 const MODE_HELP = {
   [Mode.BYTES]: {
     title:
-      "each byte by value, once zoomed in; a mix of byte classes further out",
+      "each byte by value once a pixel is one byte; further out, the mix of zero, control, ASCII and high bytes",
     dots: [
       { color: "#000000", label: "0x00" },
       { color: "#33ad59", label: "control" },
@@ -1249,13 +1308,18 @@ const MODE_HELP = {
       PADDING,
     ],
   },
-  [Mode.CLASSES]: {
-    title: "the mix of zero, control, ASCII and high bytes at every zoom",
+  [Mode.SECTIONS]: {
+    title:
+      "what each byte of an ELF file is for, read from its section headers once the NAR is fetched",
     dots: [
-      { color: "#08080a", label: "zero" },
-      { color: "#33ad59", label: "control" },
-      { color: "#4080f2", label: "ASCII" },
-      { color: "#eb5933", label: "high" },
+      { color: "#e3543d", label: "code" },
+      { color: "#4085ed", label: "read-only data" },
+      { color: "#38b366", label: "writable data" },
+      { color: "#edb833", label: "symbols, strings" },
+      { color: "#9961cc", label: "relocations" },
+      { color: "#66bfcc", label: "debug" },
+      { color: "#8c8073", label: "other ELF" },
+      { color: "#6b6b6b", label: "not ELF" },
       HATCH,
       PADDING,
     ],
@@ -1436,26 +1500,151 @@ for (const link of document.querySelectorAll("#lanes a")) {
 
 const words = (text) => text.split(/\s+/).filter(Boolean);
 
+// ---------- the selection ----------
+
+// What the Map button maps: packages and store paths collected from the
+// Package and Store path lanes, shown as chips under the lanes. A link
+// starts with its own roots selected.
+const Selected = Object.freeze({ PACKAGE: "pkg", PATH: "path" });
+
+const selectionKey = (entry) =>
+  entry.kind === Selected.PACKAGE
+    ? `${Selected.PACKAGE}:${entry.attr}@${entry.version ?? ""}`
+    : `${Selected.PATH}:${entry.path}`;
+
+const isSelected = (entry) =>
+  state.selection.some((e) => selectionKey(e) === selectionKey(entry));
+
+function addToSelection(entries) {
+  for (const entry of entries) {
+    if (!isSelected(entry)) {
+      state.selection.push(entry);
+    }
+  }
+  renderSelection();
+}
+
+function toggleSelection(entry) {
+  if (isSelected(entry)) {
+    state.selection = state.selection.filter(
+      (e) => selectionKey(e) !== selectionKey(entry),
+    );
+  } else {
+    state.selection.push(entry);
+  }
+  renderSelection();
+}
+
+function selectionSource() {
+  return {
+    paths: state.selection
+      .filter((e) => e.kind === Selected.PATH)
+      .map((e) => e.path),
+    pkgs: state.selection
+      .filter((e) => e.kind === Selected.PACKAGE)
+      .map(({ attr, version }) => ({ attr, version })),
+    json: null,
+  };
+}
+
+// Whether the selection is what the map already shows.
+function selectionIsMapped() {
+  const mapped = new Set([
+    ...state.source.pkgs.map((p) =>
+      selectionKey({ kind: Selected.PACKAGE, ...p }),
+    ),
+    ...state.source.paths.map((path) =>
+      selectionKey({ kind: Selected.PATH, path }),
+    ),
+  ]);
+  return (
+    state.jsonText === null &&
+    state.source.json === null &&
+    mapped.size === state.selection.length &&
+    state.selection.every((e) => mapped.has(selectionKey(e)))
+  );
+}
+
+function renderSelection() {
+  const chips = state.selection.map((entry) => {
+    const label =
+      entry.kind === Selected.PACKAGE
+        ? el(
+            "a",
+            {
+              class: "out",
+              href: multiverseUrl({ attr: entry.attr, version: entry.version }),
+              target: "_blank",
+              rel: "noopener",
+              title: `${entry.attr} on nixmultiverse.com`,
+            },
+            `${entry.attr} ${entry.version ?? "newest"}`,
+          )
+        : el(
+            "span",
+            { title: entry.path },
+            entry.path.slice(entry.path.lastIndexOf("/") + 1).slice(33) ||
+              entry.path,
+          );
+    return el(
+      "span",
+      { class: "chip" },
+      label,
+      el(
+        "button",
+        {
+          class: "drop",
+          type: "button",
+          title: "take it out of the selection",
+          onclick: () => toggleSelection(entry),
+        },
+        "×",
+      ),
+    );
+  });
+  fill($("selection"), ...chips);
+
+  const button = $("map-selection");
+  const mapped = selectionIsMapped();
+  button.hidden = state.selection.length === 0;
+  button.disabled = mapped;
+  button.textContent = mapped
+    ? "Mapped"
+    : state.selection.length > 1
+      ? `Map ${state.selection.length} roots`
+      : "Map";
+  picker.refresh();
+}
+
+$("map-selection").addEventListener("click", () => {
+  navigate(selectionSource());
+});
+
 $("path-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  navigate({ paths: words($("store-path").value), pkgs: [], json: null });
+  addToSelection(
+    words($("store-path").value).map((path) => ({ kind: Selected.PATH, path })),
+  );
+  $("store-path").value = "";
 });
 
 // The package lane completes attributes and versions, lists versions with
-// links to nixmultiverse.com, and maps the one picked.
-new PackagePicker({
+// links to nixmultiverse.com, and adds or removes the one clicked.
+const picker = new PackagePicker({
   input: $("pkg-input"),
   dropdown: $("pkg-complete"),
   results: $("pkg-results"),
   current: (version) =>
-    state.source.pkgs.some(
-      (p) => p.attr === version.attr && p.version === version.version,
-    ),
+    isSelected({
+      kind: Selected.PACKAGE,
+      attr: version.attr,
+      version: version.version,
+    }),
   onPick: (version) =>
-    navigate({
-      paths: [],
-      pkgs: [{ attr: version.attr, version: version.version }],
-      json: null,
+    toggleSelection({
+      kind: Selected.PACKAGE,
+      attr: version.attr,
+      version: version.version,
     }),
 });
 
@@ -1467,7 +1656,8 @@ $("pkg-form").addEventListener("submit", (event) => {
       ? { attr: spec, version: null }
       : { attr: spec.slice(0, at), version: spec.slice(at + 1) };
   });
-  navigate({ paths: [], pkgs, json: null });
+  addToSelection(pkgs.map((p) => ({ kind: Selected.PACKAGE, ...p })));
+  $("pkg-input").value = "";
 });
 
 $("json-form").addEventListener("submit", (event) => {

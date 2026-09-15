@@ -5,6 +5,7 @@
 //              indexes     the NAR's file index             kept forever
 //              refs        store-path references found       kept forever
 //              raw         which NARs are on disk, and size kept with the files
+//              sections    ELF section ranges and kinds     kept forever
 //   OPFS       raw/<hash>  the decompressed NAR             evicted by LRU
 //              fine/<hash> its 256-byte summaries           evicted with it
 //
@@ -13,13 +14,14 @@
 // then keeps raw bytes in the tile worker's memory.
 
 const DB_NAME = "seenix";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const Store = Object.freeze({
   SUMMARIES: "summaries",
   INDEXES: "indexes",
   REFS: "refs",
   RAW: "raw",
+  SECTIONS: "sections",
 });
 
 const memory = new Map(Object.values(Store).map((name) => [name, new Map()]));

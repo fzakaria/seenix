@@ -2,7 +2,8 @@
 // nixpkgs-multiverse index, and versions once an "@" is typed; under it,
 // the attributes matching the word at the caret, and once one is chosen,
 // every version nixpkgs shipped of it. Each version number links to its
-// page on nixmultiverse.com, and the rest of the pill maps that version.
+// page on nixmultiverse.com, and the rest of the pill adds that version to
+// the selection the Map button maps, or takes it back out.
 //
 // A version with no x86_64-linux build is shown struck through rather
 // than hidden, so the list matches the version count beside the
@@ -45,6 +46,8 @@ export class PackagePicker {
     this.suggestions = [];
     this.selected = -1;
     this.expanded = null;
+    // The pills on screen, so a selection change re-marks them in place.
+    this.rows = [];
 
     let timer;
     input.addEventListener("input", () => {
@@ -191,6 +194,7 @@ export class PackagePicker {
     this.expanded = attr;
     fill(this.results, el("p", { class: "muted" }, `loading ${attr}…`));
     const versions = await versionRowsOf(attr);
+    this.rows = [];
     if (this.expanded !== attr) {
       return;
     }
@@ -252,24 +256,40 @@ export class PackagePicker {
       );
     }
 
-    const on = this.current(version);
-    return el(
+    const pill = el(
       "span",
-      { class: on ? "pick on" : "pick" },
+      { class: "pick" },
       number,
       el(
         "button",
         {
           class: "take",
           type: "button",
-          title: `map ${version.storePath}`,
           onclick: () => this.onPick(version),
         },
-        version.closureSize > 0
-          ? `map ${humanBytes(version.closureSize)}`
-          : "map",
+        version.closureSize > 0 ? humanBytes(version.closureSize) : "pick",
       ),
     );
+    const row = { version, pill };
+    this.rows.push(row);
+    this.mark(row);
+    return pill;
+  }
+
+  // A pill in the selection is tinted, and says so on hover.
+  mark({ version, pill }) {
+    const on = this.current(version);
+    pill.classList.toggle("on", on);
+    pill.querySelector(".take").title = on
+      ? `${version.storePath}. Click to take it back out of the selection.`
+      : `${version.storePath}. Click to add it to the selection.`;
+  }
+
+  // The selection changed somewhere else: re-mark the pills on screen.
+  refresh() {
+    for (const row of this.rows) {
+      this.mark(row);
+    }
   }
 
   replaceWord(text) {
